@@ -22,33 +22,31 @@ int main(int argc, char** argv) {
 #if defined(DEBUG) && defined(TESTS)
 	return TestMain(argc, argv);
 #endif // DEBUG
-
-	rom::Load("F:/C++ Projects/gameboy emulator/roms/tetris.gb");
 }
 
 #ifdef DEBUG
 
-static const std::filesystem::path romPath = ROMPATH;
+static const std::filesystem::path testPath = TESTPATH;
 
 using namespace std::string_view_literals;
-static constexpr std::array testRoms {
-	"cgb_sound/cgb_sound.gb"sv,
-	"cpu_instrs/cpu_instrs.gb"sv,
-	"dmg_sound/dmg_sound.gb"sv,
-	"halt_bug/halt_bug.gb"sv,
-	"instr_timing/instr_timing.gb"sv,
-	"interrupt_time/interrupt_time.gb"sv,
-	"mem_timing/mem_timing.gb"sv,
-	"mem_timing-2/mem_timing-2.gb"sv,
-	"oam_bug/oam_bug.gb"sv
-};
+
+static std::vector<std::filesystem::path> testRoms{};
 
 static int TestMain(int argc, char** argv) {
+	// add all test roms from directories into test rom list
+	for (auto& file : std::filesystem::recursive_directory_iterator{ testPath }) {
+		if (file.is_regular_file() && file.path().extension() == ".gb")
+			testRoms.push_back(file.path());
+	}
+
 	if (argc < 2) {
 		std::println(stderr, "To run a specific test, input either a file path or a number. Tests available:");
-		
+
 		for (const auto [i, test] : std::views::enumerate(testRoms)) {
-			std::println(stderr, "\t{}. {}", i + 1, (romPath / test).string());
+			std::string testStr = test.string();
+			testStr = testStr.substr(testStr.find("tests") + 6);
+
+			std::println(stderr, "\t{:02}. {}", i + 1, testStr);
 		}
 
 		return 1;
@@ -88,19 +86,28 @@ static int TestMain(int argc, char** argv) {
 }
 
 static int RunTests() {
-	for (const auto [i, testPath] : std::views::enumerate(testRoms)) {
-		std::println("Test {}: {}", i, testPath.substr(testPath.find('/')));
+	for (const auto [i, test] : std::views::enumerate(testRoms)) {
+		std::string testStr = test.string();
+		testStr = testStr.substr(testStr.find_last_of('/'));
+
+		std::println("Test {}: {}", i, testStr);
 		
-		if (int res = RunTest(romPath / testPath); res != 0)
+		if (int res = RunTest(test); res != 0)
 			return res;
 	}
 }
 
 static inline int RunTest(std::size_t testNum) {
-	return RunTest(romPath / testRoms[testNum]);
+	return RunTest(testPath / testRoms[testNum]);
 }
 
 static int RunTest(const std::filesystem::path& test) {
+	using namespace gb;
+	auto data = rom::Load(test);
+
+	if (!data.has_value())
+		return -1;
+
 	// TODO
 	return 0;
 }

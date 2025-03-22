@@ -47,12 +47,13 @@ add_subdirectory(src/imgui)
 
 include_directories(${PROJECT_NAME} PUBLIC include include/imgui)
 
-add_executable(${PROJECT_NAME} ${IMGUISRC} "src/main.cpp" "src/ROM.cpp")
+add_executable(${PROJECT_NAME} ${IMGUISRC} "src/main.cpp" "src/ROM.cpp" "src/CPU.cpp")
 
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE "$<$<CONFIG:Debug,RelWithDebInfo>:DEBUG>"
-    PUBLIC ROMPATH="${CMAKE_CURRENT_SOURCE_DIR}/tests"
+    PUBLIC ROMPATH="${CMAKE_CURRENT_SOURCE_DIR}/roms"
     PRIVATE "$<$<CONFIG:Debug,RelWithDebInfo>:$<$<BOOL:${ENABLE_TESTS}>:TESTS>>"
+    PRIVATE TESTPATH="$<$<CONFIG:Debug,RelWithDebInfo>:$<$<BOOL:${ENABLE_TESTS}>:${CMAKE_CURRENT_SOURCE_DIR}/tests>>"
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include ${GG_LOCATION} include/external)

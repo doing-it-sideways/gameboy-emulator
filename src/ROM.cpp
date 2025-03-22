@@ -146,7 +146,7 @@ std::optional<std::vector<byte>> Load(const std::filesystem::path& romPath) {
 	std::println("\t- SGB Flag: {:#04X}", header->sgbFlag);
 
 	if (auto it = CartridgeType.find(header->cartridgeType); it != CartridgeType.end())
-		std::println("\t- Cartridge Type: {}", *it);
+		std::println("\t- Cartridge Type: {}", it->second);
 	else
 		std::println("\t- Cartridge Type: Unknown ({:#04X})", header->cartridgeType);
 	
@@ -180,11 +180,11 @@ std::optional<std::vector<byte>> Load(const std::filesystem::path& romPath) {
 	}
 
 	if (u8 match = vec.value()[0x014D]; checksum != match) {
-		std::println("\t- Checksum: {:#04X} (vs $014D) {:#04X} ---FAILED---", checksum, match);
+		std::println("\t- Checksum: {:#04X} (vs $014D) {:#04X}\n---FAILED---", checksum, match);
 		return std::nullopt;
 	}
 	else
-		std::println("\t- Checksum: {:#04X} (vs $014D) {:#04X} ---SUCCESS---", checksum, match);
+		std::println("\t- Checksum: {:#04X} (vs $014D) {:#04X}\n---SUCCESS---", checksum, match);
 
 	return vec;
 }

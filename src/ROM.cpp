@@ -33,7 +33,6 @@ static constexpr std::array<byte, 0x133 - 0x104 + 1> nintendoLogoBytes = {
 };
 
 std::optional<std::vector<byte>> Load(const std::filesystem::path& romPath) {
-	// check if it's a valid path
 	if (!std::filesystem::exists(romPath)) {
 		std::println(stderr, "ROM at {} doesn't exist.", romPath.string());
 		return std::nullopt;

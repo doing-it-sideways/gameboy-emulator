@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core.hpp"
+#include <vector>
 
 namespace gb::cpu {
 /* 
@@ -12,10 +13,10 @@ register file (holds cpu state in registers)
 		- 8-bit accumulator (a)
 		- 8-bit flag register (f)
 			- bit 7 (z): zero flag
-			- bit 6 (n): subtraction flag (bcd) - see gbdev
-			- bit 5 (h): half carry flag (bcd) - see gbdev
+			- bit 6 (n): subtraction flag (bcd) - see gbdev.io
+			- bit 5 (h): half carry flag (bcd) - see gbdev.io
 			- bit 4 (c / cy): carry flag
-	- general-purpose registers (16-bit, 8 bit halves)
+	- general-purpose registers (16-bit, 8-bit halves)
 		- bc
 		- de
 		- hl
@@ -44,16 +45,28 @@ register file (holds cpu state in registers)
 */
 
 struct Context {
+// --- Structs and Typedefs ---
 	struct RegisterFile {
 		u16 pc;
 		u16 sp;
-		u8 a, f;
-		u8 b, c;
-		u8 d, e;
-		u8 h, l;
-	} reg;
+		byte a, f; // f could also be a bit-field, but not very wieldy
+		byte b, c;
+		byte d, e;
+		byte h, l;
+	};
 
-	Context();
+	enum class Flags : byte {
+		Zero = 7,
+		Sub = 6,
+		HalfCarry = 5,
+		Carry = 4
+	};
+
+// --- Vars ---
+	RegisterFile reg;
+
+	// Instruction register, interrupt enable
+	byte ir, ie;
 
 #pragma region 16 bit register definitions
 #define REGISTER16(r1, r2) \
@@ -71,11 +84,89 @@ struct Context {
 #undef REGISTER16
 #pragma endregion
 
+// --- Functions ---
+	// Mimic booting up the cpu
+	constexpr Context();
 
+	// Increment and Decrement functions for 16-bit addresses
+	constexpr void Inc(u16& reg);
+	constexpr void Dec(u16& reg);
+
+	// Shorthand for setting flag register
+	constexpr void SetFlag(Flags flag, bool set);
 };
 
+// https://gbdev.io/pandocs/CPU_Instruction_Set.html
+// grouped by classification from gekkio.fi complete technical reference
 enum class OpCode : byte {
-	nop = 0x00,
+	nop,
+
+	// 8-bit loads
+	ld_r8_r8,		// data from reg to reg
+	ld_r8_imm8,		// data to reg
+	ld_acc_r16mem,	// data from abs address (register) to accumulator
+	ld_r16mem_acc,	// data from accumulator to abs address (register)
+	ld_acc_imm16,	// data from abs address (constant) to accumulator
+	ld_imm16_a,		// data from accumulator to abs address (constant)
+	ldh_acc_ffc,	// data from ($FF00 + c) to accumulator
+	ldh_ffc_acc,	// data from accumulator to ($FF00 + c)
+	ldh_acc_ffimm8,	// data from ($FF00 + n) to accumulator
+	ldh_ffimm8_acc,	// data from accumulator to ($FF00 + n)
+	ld_acc_hld,		// data from hl-- to accumulator
+	ld_hld_acc,		// data from accumulator to hl--
+	ld_acc_hli,		// data from hl++ to accumulator
+	ld_hli_acc,		// data from accumulator to hl++
+
+	// 16-bit loads
+	ld_r16_imm16,	// data to reg
+	ld_imm16_sp,	// data from sp to abs address (constant)
+	ld_sp_hl,		// data from hl to stack pointer
+	ld_hl_spimm8,	// data from (sp + n) to hl
+	push_r16stk,	// push to stack
+	pop_r16stk,		// pop from stack
+
+	// 8-bit arithmetic/logical
+	add_r8,			// acc += register
+	add_imm8,		// acc += n
+	adc_r8,			// acc += register + carry
+	adc_imm8,		// acc += n + carry
+	sub_r8,			// acc -= register
+	sub_imm8,		// acc -= n
+	sbc_r8,			// acc = acc - register - carry
+	sbc_imm8,		// acc = acc - n - carry
+	cp_r8,			// set flags for comparison between acc and register
+	cp_imm8,		// set flags for comparison between acc and n
+	inc_r8,			// ++register
+	dec_r8,			// --register
+	and_r8,			// acc &= reg
+	and_imm8,		// acc &= n
+	or_r8,			// acc |= reg
+	or_imm8,		// acc |= n
+	xor_r8,			// acc ^= reg
+	xor_imm8,		// acc ^= n
+	ccf,			// complement carry flag
+	scf,			// set carry flag
+	daa,			// decimal adjust accumulator
+	cpl,			// complement accumulator
+
+	// 16-bit arithmetic
+	inc_r16,		// ++register
+	dec_r16,		// --register
+	add_hl_r16,		// hl += n
+	add_sp_imm8,	// sp += e
+
+	// rotate, shift, bit
+
+
+	// control flow
+
+	// interrupt / halt related
+	stop,
+	halt,
+	di, // disable interrupts
+	ei, // enable interrupts
+
+	undefined // $D3, $DB, $DD, $E3, $E4, $EB, $EC, $ED, $F4, $FC, and $FD
 };
 
 } // namespace gb::cpu

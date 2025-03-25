@@ -47,7 +47,7 @@ add_subdirectory(src/imgui)
 
 include_directories(${PROJECT_NAME} PUBLIC include include/imgui)
 
-add_executable(${PROJECT_NAME} ${IMGUISRC} "src/main.cpp" "src/ROM.cpp" "src/CPU.cpp")
+add_executable(${PROJECT_NAME} ${IMGUISRC} "src/main.cpp" "src/ROM.cpp" "src/CPU.cpp" "src/Memory.cpp")
 
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE "$<$<CONFIG:Debug,RelWithDebInfo>:DEBUG>"

@@ -46,20 +46,23 @@ register file (holds cpu state in registers)
 
 struct Context {
 // --- Structs and Typedefs ---
+	struct Flags {
+		byte Zero : 1;
+		byte Sub : 1;
+		byte HalfCarry : 1;
+		byte Carry : 1;
+		byte : 4; // unused
+	};
+
 	struct RegisterFile {
 		u16 pc;
 		u16 sp;
-		byte a, f; // f could also be a bit-field, but not very wieldy
+		byte a;//, f; // f could also be a bit-field, but not very wieldy
+		Flags f;
+
 		byte b, c;
 		byte d, e;
 		byte h, l;
-	};
-
-	enum class Flags : byte {
-		Zero = 7,
-		Sub = 6,
-		HalfCarry = 5,
-		Carry = 4
 	};
 
 // --- Vars ---
@@ -93,13 +96,13 @@ struct Context {
 	constexpr void Dec(u16& reg);
 
 	// Shorthand for setting flag register
-	constexpr void SetFlag(Flags flag, bool set);
+	//constexpr void SetFlags(Flags flag, bool set);
 };
 
 // https://gbdev.io/pandocs/CPU_Instruction_Set.html
 // grouped by classification from gekkio.fi complete technical reference
 enum class OpCode : byte {
-	nop,
+	nop,			// https://gist.github.com/SonoSooS/c0055300670d678b5ae8433e20bea595#nop-and-stop
 
 	// 8-bit loads
 	ld_r8_r8,		// data from reg to reg
@@ -156,15 +159,42 @@ enum class OpCode : byte {
 	add_sp_imm8,	// sp += e
 
 	// rotate, shift, bit
-
+	rlca,			// rotate acc left circular
+	rrca,			// rotate acc right circular
+	rla,			// rotate acc left (carry = lost data)
+	rra,			// rotate acc right (carry = lost data)
+	cb_rlc_r8,		// rotate reg left circular
+	cb_rrc_r8,		// rotate reg right circular
+	cb_rl_r8,		// rotate reg left (carry = lost data)
+	cb_rr_r8,		// rotate reg right (carry = lost data)
+	cb_sla_r8,		// reg <<= 1
+	cb_sra_r8,		// reg >>= 1 (abcd -> xabc. x = a)
+	cb_swap_r8,		// swap nibbles in reg
+	cb_srl_r8,		// reg >>= 1 (abcd -> xabc. x = 0)
+	cb_bit_b3_r8,	// test bit b3 in reg == 1
+	cb_res_b3_r8,	// reset bit b3 in reg
+	cb_set_b3_r8,	// set bit b3 in reg
 
 	// control flow
+	jp_imm16,		// jump to abs address n
+	jp_hl,			// jump to address stored in hl
+	jp_cond_imm16,	// conditional jump to abs address n depending on zero flag
+	jr_imm8,		// jump to pc + n (n is signed)
+	jr_cond_imm8,	// conditional jump to abs address n (n is signed) depending on zero flag
+	call_imm16,		// function call to abs address n
+	call_cond_imm16,// conditional call to abs address n depending on zero flag
+	ret,			// return from a function
+	ret_cond,		// return from a function depending on zero flag
+	reti,			// return from a function and enable interrupts (ei + ret)
+	rst_tgt3,		// function call to abs fixed address tgt3 (see gbdev.io)
 
 	// interrupt / halt related
-	stop,
-	halt,
-	di, // disable interrupts
-	ei, // enable interrupts
+	stop,			// enter cpu very low-power mode. behavior is fragile.
+					// https://gbdev.io/pandocs/Reducing_Power_Consumption.html#using-the-stop-instruction
+					// or https://gist.github.com/SonoSooS/c0055300670d678b5ae8433e20bea595#nop-and-stop
+	halt,			// enter cpu low-power mode until interrupt occurs. see: https://rgbds.gbdev.io/docs/v0.9.1/gbz80.7#HALT
+	di,				// disable interrupts
+	ei,				// enable interrupts
 
 	undefined // $D3, $DB, $DD, $E3, $E4, $EB, $EC, $ED, $F4, $FC, and $FD
 };

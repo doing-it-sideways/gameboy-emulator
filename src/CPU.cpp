@@ -21,8 +21,8 @@ constexpr void Context::Dec(u16& reg) {
 	// TODO
 }
 
-constexpr void Context::SetFlag(Flags flag, bool set) {
-	// TODO
-}
+//constexpr void Context::SetFlags(Flags flag, bool set) {
+//	// TODO
+//}
 
 } // namespace gb::cpu

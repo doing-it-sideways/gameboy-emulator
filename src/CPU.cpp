@@ -1,5 +1,9 @@
 #include "CPU.hpp"
 
+#ifdef DEBUG
+#include <print>
+#endif
+
 namespace gb::cpu {
 
 // https://gbdev.io/pandocs/Power_Up_Sequence.html
@@ -13,16 +17,32 @@ constexpr Context::Context()
 	// TODO
 }
 
-constexpr void Context::Inc(u16& reg) {
-	// TODO
+constexpr void Context::Inc(u16 reg) {
+	u16 val;
+	if (val = bc(); reg == val)
+		bc(val + 1);
+	else if (val = de(); reg == val)
+		de(val + 1);
+	else if (val = hl(); reg == val)
+		hl(val + 1);
+#ifdef DEBUG
+	else
+		std::println(stderr, "Unknown register!");
+#endif
 }
 
-constexpr void Context::Dec(u16& reg) {
-	// TODO
+constexpr void Context::Dec(u16 reg) {
+	u16 val;
+	if (val = bc(); reg == val)
+		bc(val - 1);
+	else if (val = de(); reg == val)
+		de(val - 1);
+	else if (val = hl(); reg == val)
+		hl(val - 1);
+#ifdef DEBUG
+	else
+		std::println(stderr, "Unknown register!");
+#endif
 }
-
-//constexpr void Context::SetFlags(Flags flag, bool set) {
-//	// TODO
-//}
 
 } // namespace gb::cpu

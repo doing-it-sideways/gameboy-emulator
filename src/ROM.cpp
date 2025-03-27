@@ -25,6 +25,7 @@ static constexpr auto CartridgeType = mapbox::eternal::map<u8, std::string_view>
 #include "lists/CartridgeMap.txt"
 });
 
+// Note: GBC only checks first 24 bytes, DMG/MGB check all bytes
 static constexpr std::array<byte, 0x133 - 0x104 + 1> nintendoLogoBytes = {
 	0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00,
 	0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC,
@@ -32,7 +33,7 @@ static constexpr std::array<byte, 0x133 - 0x104 + 1> nintendoLogoBytes = {
 	0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
 };
 
-std::optional<std::vector<byte>> Load(const std::filesystem::path& romPath) {
+std::optional<RomData> Load(const std::filesystem::path& romPath) {
 	if (!std::filesystem::exists(romPath)) {
 		std::println(stderr, "ROM at {} doesn't exist.", romPath.string());
 		return std::nullopt;
@@ -91,7 +92,7 @@ std::optional<std::vector<byte>> Load(const std::filesystem::path& romPath) {
 
 	static_assert(sizeof(*header) == 0x014F - 0x0100 + 1);
 
-	auto vec = std::make_optional<std::vector<byte>>(romSize);
+	auto vec = std::make_optional<RomData>(romSize);
 
 	{ // read in rom
 		std::ifstream stream{ romPath, std::ios::binary };

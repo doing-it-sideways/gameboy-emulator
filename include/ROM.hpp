@@ -8,7 +8,8 @@
 
 namespace gb::rom {
 
-std::optional<std::vector<byte>> Load(const std::filesystem::path& romPath);
+using RomData = std::vector<byte>;
+std::optional<RomData> Load(const std::filesystem::path& romPath);
 
 }
 

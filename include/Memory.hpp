@@ -1,9 +1,18 @@
 #pragma once
 
 #include "Core.hpp"
+#include "ROM.hpp"
 
-namespace gb::mem {
+namespace gb {
 
-byte Read(u16 addr);
+class Memory {
+public:
+	constexpr Memory(rom::RomData&& data);
 
-} // namespace gb::mem
+	constexpr byte operator[](u16 address);
+
+private:
+	rom::RomData romData;
+};
+
+} // namespace gb

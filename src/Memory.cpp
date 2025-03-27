@@ -1,6 +1,13 @@
 #include "Memory.hpp"
+#include <utility>
 
-namespace gb::mem {
+namespace gb {
+
+constexpr Memory::Memory(rom::RomData&& data)
+	: romData(std::move(data))
+{
+	// TODO
+}
 
 constexpr u16 interrupts = 0x0000;    // restart and interrupts
 constexpr u16 headerStart = 0x0100;   // cartridge header
@@ -17,4 +24,9 @@ constexpr u16 ioStart = 0xFF00;       // io registers
 constexpr u16 hramStart = 0xFF80;     // High RAM (Zero page)
 constexpr u16 regIE = 0xFFFF;         // Interrupt enable register
 
-} // namespace gb::mem
+constexpr byte Memory::operator[](u16 address) {
+	// TODO
+	return 0;
+}
+
+} // namespace gb

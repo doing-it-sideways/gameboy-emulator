@@ -83,11 +83,11 @@ public:
 
 #pragma region 16 bit register definitions
 #define U16GETTER(r1, r2) \
-	constexpr inline u16 r1##r2() const { return (static_cast<u16>(r1) << 8) + r2; }
+		constexpr u16 r1##r2() const { return (static_cast<u16>(r1) << 8) + r2; }
 
 #define REGISTER16(r1, r2) \
 		U16GETTER(r1, r2) \
-		constexpr inline void r1##r2(u16 val) { \
+		constexpr void r1##r2(u16 val) { \
 			r1 = static_cast<u8>((val & 0xFF00) >> 8); \
 			r2 = static_cast<u8>(val & 0x00FF); \
 		}
@@ -96,6 +96,11 @@ public:
 		REGISTER16(b, c);
 		REGISTER16(d, e);
 		REGISTER16(h, l);
+
+		// Used in CPUInstructions.cpp: R16_Get/SetFromBits()
+		// Implementation requires a callable getter/setter for sp.
+		constexpr u16 spGet() const { return sp; }
+		constexpr void spSet(u16 val) { sp = val; }
 #undef U16GETTER
 #undef REGISTER16
 #pragma endregion

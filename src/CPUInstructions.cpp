@@ -13,6 +13,7 @@
 namespace gb::cpu {
 
 using InstrFunc = void(*)(Context&, Memory&);
+using Addr16Getter = void(Context::RegisterFile::*)();
 using Addr16Setter = void(Context::RegisterFile::*)(u16);
 
 #define INSTR static void
@@ -26,15 +27,15 @@ using Addr16Setter = void(Context::RegisterFile::*)(u16);
 #endif
 
 #pragma region shorthand functions
-	// Reads one byte from the memory, increments the program counter
-	// and adds an mcycle.
+// Reads one byte from the memory, increments the program counter
+// and adds an mcycle.
 static byte Read(Context& cpu, Memory& mem) {
 	cpu.MCycle();
 	return mem[++cpu.reg.pc];
 }
 
-	// Reads two bytes from memory and returns the data as a 16-bit value.
-	// Increments program counter twice and adds two mcycles.
+// Reads two bytes from memory and returns the data as a 16-bit value.
+// Increments program counter twice and adds two mcycles.
 static u16 Read2(Context& cpu, Memory& mem) {
 	byte lo = mem[cpu.reg.pc++];
 	cpu.MCycle();
@@ -45,8 +46,8 @@ static u16 Read2(Context& cpu, Memory& mem) {
 	return static_cast<u16>(hi) << 8 | lo;
 }
 
-	// Transform bit params (0-7) to a register for use.
-static byte& R8FromBits(Context::RegisterFile& regs, Memory& mem, byte val) {
+// Transform value (0-7) into an 8-bit register for use.
+static byte& R8_FromBits(Context::RegisterFile& regs, Memory& mem, byte val) {
 	assert(val < 8);
 
 	switch (val) {
@@ -58,8 +59,43 @@ static byte& R8FromBits(Context::RegisterFile& regs, Memory& mem, byte val) {
 	case 5: return regs.l;
 	case 6: return mem[regs.hl()]; // load byte stored in the location pointed to by hl
 	case 7: return regs.a;
+	default: std::unreachable();
 	}
 }
+
+// Transform value (0-3) into a function pointer to a 16-bit register setter for use.
+static Addr16Setter R16_SetFromBits(byte val) {
+	assert(val < 4);
+	using rf = Context::RegisterFile;
+
+	switch (val) {
+	case 0: return &rf::bc;
+	case 1: return &rf::de;
+	case 2: return &rf::hl;
+	case 3: return &rf::spSet;
+	default: std::unreachable();
+	}
+}
+
+// Transforms a value (0-3) into a function pointer to a 16-bit register getter
+static Addr16Getter R16_GetFromBits(byte val) {
+	assert(val < 4);
+	using rf = Context::RegisterFile;
+
+	switch (val) {
+	case 0: return static_cast<Addr16Getter>(rf::bc);
+	default: std::unreachable();
+	}
+}
+
+static Addr16Getter R16Stk_GetFromBits(byte val) {
+
+}
+
+static Addr16Getter R16Mem_GetFromBits(byte val) {
+
+}
+
 #pragma endregion
 
 #pragma region non-prefixed instructions

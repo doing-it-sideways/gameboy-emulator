@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core.hpp"
-#include <vector>
+#include "Memory.hpp"
 
 namespace gb::cpu {
 /* 
@@ -44,8 +44,11 @@ register file (holds cpu state in registers)
 * // (static_cast<u16>(a) << 8) + b == reg
 */
 
-struct Context {
+enum class OpCode : byte;
+
+class Context {
 // --- Structs and Typedefs ---
+public:
 	struct Flags {
 		// bytes instead of bools so they can all be set with a single number
 		byte Zero : 1;
@@ -53,49 +56,109 @@ struct Context {
 		byte HalfCarry : 1;
 		byte Carry : 1;
 		byte : 4; // unused
+
+		constexpr operator byte() const {
+			return Zero << 7 | Subtract << 6 | HalfCarry << 5 | Carry << 4;
+		}
+
+		constexpr Flags& operator=(byte b) {
+			Zero = b & (1 << 7) ? 1 : 0;
+			Subtract = b & (1 << 6) ? 1 : 0;
+			HalfCarry = b & (1 << 5) ? 1 : 0;
+			Carry = b & (1 << 4) ? 1 : 0;
+
+			return *this;
+		}
 	};
 
 	struct RegisterFile {
 		u16 pc;
 		u16 sp;
-		byte a;//, f; // f could also be a bit-field, but not very wieldy
+		byte a;
 		Flags f;
 
 		byte b, c;
 		byte d, e;
 		byte h, l;
+
+#pragma region 16 bit register definitions
+#define U16GETTER(r1, r2) \
+	constexpr inline u16 r1##r2() const { return (static_cast<u16>(r1) << 8) + r2; }
+
+#define REGISTER16(r1, r2) \
+		U16GETTER(r1, r2) \
+		constexpr inline void r1##r2(u16 val) { \
+			r1 = static_cast<u8>((val & 0xFF00) >> 8); \
+			r2 = static_cast<u8>(val & 0x00FF); \
+		}
+
+		U16GETTER(a, f); // low byte undefined for af, dont allow setting
+		REGISTER16(b, c);
+		REGISTER16(d, e);
+		REGISTER16(h, l);
+#undef U16GETTER
+#undef REGISTER16
+#pragma endregion
 	};
 
 // --- Vars ---
+public:
 	RegisterFile reg;
 
-	// Instruction register, interrupt enable
-	byte ir, ie;
+	// Instruction register -- This holds the current op code
+	byte ir;
 
-#pragma region 16 bit register definitions
-#define REGISTER16(r1, r2) \
-	constexpr inline u16 r1##r2() const { return (static_cast<u16>(reg.##r1) << 8) + reg.##r2; } \
-	constexpr inline void r1##r2(u16 val) { \
-		reg.##r1 = static_cast<u8>((val & 0xFF00) >> 8); \
-		reg.##r2 = static_cast<u8>(val & 0x00FF); \
-	}
-
-	//REGISTER16(a, f); // low byte undefined for af
-	REGISTER16(b, c);
-	REGISTER16(d, e);
-	REGISTER16(h, l);
-#undef REGISTER16
-#pragma endregion
+	// interrupt enable
+	byte ie;
 
 // --- Functions ---
+public:
 	// Mimic booting up the cpu
-	constexpr Context();
+	explicit Context(rom::RomData&& romData);
+
+	// For stepping through instead of running
+	constexpr void Start() { _isRunning = true; }
+
+	// Handles the update loop itself.
+	void Run();
+
+	// Update "loop".
+	// Is public so the cpu can be easily stepped through from outside the class.
+	bool Update();
 
 	// Increment and Decrement functions for 16-bit addresses
-	constexpr void Inc(u16 reg);
-	constexpr void Dec(u16 reg);
+	void Inc(u16 reg16);
+	void Dec(u16 reg16);
 
-	constexpr void Exec();
+	constexpr void MCycle(u8 cycles = 1) { _mCycles += cycles; }
+
+#ifdef DEBUG
+	// Dumps current state of the cpu to console or a file
+	void Dump() const;
+#endif
+
+// --- Functions ---
+private:
+	// Translate memory from specified address to an op code.
+	// If the memory holds an invalid op code, the cpu hangs.
+	bool Fetch();
+
+	// Execute instruction from op code.
+	bool Exec();
+
+// --- Vars ---
+private:
+	Memory _memory;
+
+	// Count the number of mCycles that have happened
+	u64 _mCycles = 0;
+
+	// Relating to the run loop
+	bool _isRunning = false;
+	bool _isPaused = false;
+
+	// See halt op code to understand behavior
+	bool _isHalted = false;
 };
 
 /*

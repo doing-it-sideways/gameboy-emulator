@@ -2,6 +2,7 @@
 #include <string_view>
 
 #include "Core.hpp"
+#include "CPU.hpp"
 #include "ROM.hpp"
 
 #ifdef DEBUG
@@ -9,18 +10,20 @@
 #include <charconv>
 #include <filesystem>
 #include <ranges>
+#include <iostream>
 
 static int TestMain(int argc, char** argv);
-static int RunTests();
-static inline int RunTest(std::size_t testNum);
-static int RunTest(const std::filesystem::path& test);
+static int RunTests(bool step = false);
+static inline int RunTest(std::size_t testNum, bool step = false);
+static int RunTest(const std::filesystem::path& test, bool step = false);
 #endif
 
 int main(int argc, char** argv) {
 	using namespace gb;
 
 #if defined(DEBUG) && defined(TESTS)
-	return TestMain(argc, argv);
+	auto simulatedArgs = std::to_array<const char*>({ "", "21" });
+	return TestMain(simulatedArgs.size(), const_cast<char**>(simulatedArgs.data()));
 #endif // DEBUG
 }
 
@@ -41,6 +44,7 @@ static int TestMain(int argc, char** argv) {
 
 	if (argc < 2) {
 		std::println(stderr, "To run a specific test, input either a file path or a number. Tests available:");
+		std::println(stderr, "To step through the program, add \"step\" as the second argument.");
 
 		for (const auto [i, test] : std::views::enumerate(testRoms)) {
 			std::string testStr = test.string();
@@ -66,7 +70,14 @@ static int TestMain(int argc, char** argv) {
 				return 1;
 			}
 
-			return RunTest(testPath);
+			if (argc >= 3) {
+				std::string_view stepArg = argv[2];
+				bool shouldStep = (stepArg.compare("step") == 0);
+
+				RunTest(testPath, shouldStep);
+			}
+			else
+				return RunTest(testPath);
 		}
 		else if (ec == std::errc::invalid_argument) {
 			std::println(stderr, "Not a valid test number.");
@@ -80,12 +91,19 @@ static int TestMain(int argc, char** argv) {
 			std::println(stderr, "Number is too big, there are only {} tests.", testRoms.size());
 			return 1;
 		}
-		
-		return RunTest(testNum + 1);
+
+		if (argc >= 3) {
+			std::string_view stepArg = argv[2];
+			bool shouldStep = (stepArg.compare("step") == 0);
+
+			return RunTest(testNum, shouldStep);
+		}
+		else
+			return RunTest(testNum);
 	}
 }
 
-static int RunTests() {
+static int RunTests(bool step) {
 	for (const auto [i, test] : std::views::enumerate(testRoms)) {
 		std::string testStr = test.string();
 		testStr = testStr.substr(testStr.find_last_of('/'));
@@ -97,16 +115,30 @@ static int RunTests() {
 	}
 }
 
-static inline int RunTest(std::size_t testNum) {
-	return RunTest(testPath / testRoms[testNum]);
+static inline int RunTest(std::size_t testNum, bool step) {
+	return RunTest(testPath / testRoms[testNum], step);
 }
 
-static int RunTest(const std::filesystem::path& test) {
+static int RunTest(const std::filesystem::path& test, bool step) {
 	using namespace gb;
 	auto data = rom::Load(test);
 
 	if (!data.has_value())
 		return -1;
+
+	cpu::Context ctx(std::move(data.value()));
+
+	if (step) {
+		std::println("\n-----Press any Key to Execute the next instruction-----\n");
+		ctx.Start();
+
+		while (std::cin.get()) {
+			if (!ctx.Update())
+				break;
+		}
+	}
+	else
+		ctx.Run();
 
 	// TODO
 	return 0;

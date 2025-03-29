@@ -102,6 +102,7 @@ std::optional<RomData> Load(const std::filesystem::path& romPath) {
 
 	header = reinterpret_cast<decltype(header)>(vec->data() + 0x0100);
 
+#pragma region debug printing for rom load
 	std::println("----- Rom Loaded -----");
 	// TODO: stop emulation when logo check fails
 	std::println("\t- Nintendo Logo Check -- Matching? : {}",
@@ -172,6 +173,7 @@ std::optional<RomData> Load(const std::filesystem::path& romPath) {
 
 	std::println("\t- Region Code: {}", (header->destCode == 0x00) ? "Japan+" : "Overseas");
 	std::println("\t- ROM Version: {}", header->romVersion);
+#pragma endregion
 
 	// checksum -- taken right from gbdev.io
 	u8 checksum = 0;

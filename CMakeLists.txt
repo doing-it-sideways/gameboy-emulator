@@ -56,6 +56,11 @@ target_compile_definitions(${PROJECT_NAME}
     PRIVATE TESTPATH="$<$<CONFIG:Debug,RelWithDebInfo>:$<$<BOOL:${ENABLE_TESTS}>:${CMAKE_CURRENT_SOURCE_DIR}/tests>>"
 )
 
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PUBLIC /Zi)
+    target_link_options(${PROJECT_NAME} PUBLIC /INCREMENTAL)
+endif()
+
 target_include_directories(${PROJECT_NAME} PUBLIC include ${GG_LOCATION} include/external)
 
 # i couldn't get eternal to work as a library

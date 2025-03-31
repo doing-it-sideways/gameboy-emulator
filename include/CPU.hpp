@@ -186,7 +186,7 @@ enum class OpCode : byte {
 
 	// 8-bit loads
 	ld_r8_r8 =			0b01'000'000,	// data from reg to reg.
-										//note: ld [hl], [hl] will yield the halt instruction
+										// note: ld [hl], [hl] will yield the halt instruction
 	ld_r8_imm8 =		0b00'000'110,	// data to reg
 	ld_acc_r16mem =		0b00'00'1010,	// data from abs address (register) to accumulator
 	ld_r16mem_acc =		0b00'00'0010,	// data from accumulator to abs address (register)

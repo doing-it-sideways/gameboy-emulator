@@ -3,7 +3,7 @@
 #include <bit>
 #include <cstdint>
 
-#ifdef __cpp_lib_debugging
+#if defined(DEBUG) && defined(__cpp_lib_debugging)
 #include <debugging>
 #endif
 

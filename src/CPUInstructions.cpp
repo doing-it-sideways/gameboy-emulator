@@ -18,13 +18,24 @@ using Addr16Setter = void(Context::RegisterFile::*)(u16);
 #define INSTR static void
 
 #ifdef DEBUG
-[[noreturn]] static void NoImpl(std::source_location loc = std::source_location::current()) {
-	std::println(stderr, "Unimplemented op code handler: {}", loc.function_name());
+static std::string_view GetFunctionName(const std::source_location& loc) {
+	std::string_view name = loc.function_name();
+	auto start = name.find("gb::cpu::");
+	auto end = name.find('(');
+
+	return name.substr(name.find("gb::cpu::") + 9, end - start - 9);
+}
+
+[[noreturn]] static void NoImpl(std::source_location loc = std::source_location::current())
+{
+	auto name = GetFunctionName(loc);
+	std::println(stderr, "Unimplemented op code handler: {}", name);
 	std::exit(EXIT_FAILURE);
 }
 
 static void PrintFuncName(std::source_location loc = std::source_location::current()) {
-	std::println("Function: {}", loc.function_name());
+	auto name = GetFunctionName(loc);
+	std::println("Function: {}", name);
 }
 
 #define NOIMPL() NoImpl()
@@ -121,8 +132,8 @@ static Addr16Setter R16Mem_GetFromBits(byte val) {
 	switch (val) {
 	case 0: return &rf::bc;
 	case 1: return &rf::de;
-	case 2: [[fallthrough]]; // ++
-	case 3: return &rf::hl;	// --
+	case 2: [[fallthrough]]; // ++ TODO
+	case 3: return &rf::hl;	 // -- TODO
 	default: std::unreachable();
 	}
 }
@@ -130,10 +141,6 @@ static Addr16Setter R16Mem_GetFromBits(byte val) {
 #pragma endregion
 
 #pragma region non-prefixed instructions
-	// Declared here so it can be stored in the map,
-	// definition can be found in the prefixed instructions section
-INSTR cb_prefix(Context&, Memory&);
-
 INSTR nop(Context& cpu, Memory& mem) {
 	// TODO: m cycle?
 	PRINTFUNC();
@@ -159,8 +166,30 @@ INSTR ld_r8_r8(Context& cpu, Memory& mem) {
 	cpu.MCycle();
 }
 
-INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
+INSTR ld_r8_imm8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	byte destVal = (cpu.ir & 0b00'111'000) >> 3;
+	byte& reg = R8_FromBits(cpu.reg, mem, destVal);
+
+	reg = Read(cpu, mem);
+	cpu.MCycle();
+}
+
+INSTR ld_acc_r16mem(Context& cpu, Memory& mem) {
 	NOIMPL();
+}
+
+INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	u16 data = Read2(cpu, mem);
+
+	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
+	Addr16Setter handle = R16_SetFromBits(destVal);
+	
+	(cpu.reg.*handle)(data);
+	cpu.MCycle();
 }
 
 INSTR jp_imm16(Context& cpu, Memory& mem) {
@@ -210,6 +239,8 @@ static constexpr auto variableInstrMap = std::to_array<VariableInstrData>(
 {
 	INSTRDATA(ld_r8_r8, 0b00'111'111),
 	INSTRDATA(ld_r16_imm16, 0b00'11'0000),
+	INSTRDATA(ld_r8_imm8, 0b00'111'000),
+	INSTRDATA(ld_acc_r16mem, 0b00'11'0000)
 });
 
 // A mapping of all the cb instructions that have many possible op codes.

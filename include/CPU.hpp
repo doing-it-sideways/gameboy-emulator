@@ -49,6 +49,9 @@ enum class OpCode : byte;
 class Context {
 // --- Structs and Typedefs ---
 public:
+	// Function signature for all cpu instruction handlers.
+	using InstrFunc = void(*)(Context&, Memory&);
+
 	struct Flags {
 		// bytes instead of bools so they can all be set with a single number
 		byte Zero : 1;
@@ -157,6 +160,9 @@ private:
 
 	// Count the number of mCycles that have happened
 	u64 _mCycles = 0;
+
+	// Next instruction to be executed.
+	InstrFunc _handler;
 
 	// Relating to the run loop
 	bool _isRunning = false;
@@ -275,3 +281,11 @@ enum class OpCode : byte {
 };
 
 } // namespace gb::cpu
+
+constexpr bool operator==(gb::cpu::OpCode op, gb::byte b) {
+	return static_cast<gb::byte>(op) == b;
+}
+
+constexpr bool operator==(gb::byte b, gb::cpu::OpCode op) {
+	return op == b;
+}

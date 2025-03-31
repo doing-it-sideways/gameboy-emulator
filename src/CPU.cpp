@@ -99,7 +99,7 @@ void Context::Dump() const {
 	std::println("flags: {:04b}", reg.f >> 4);
 	std::println("registers: a: {:#04x}, bc: {:#06x}, de: {:#06x}, hl: {:#06x}",
 				 reg.a, reg.bc(), reg.de(), reg.hl());
-	std::println("ir: {:08b}\tie: {:08b}\n", ir, ie);
+	std::println("ir: {:#010b}\tie: {:#010b}\n", ir, ie);
 }
 #endif // DEBUG
 

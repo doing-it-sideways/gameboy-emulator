@@ -12,18 +12,26 @@
 
 namespace gb::cpu {
 
-using InstrFunc = void(*)(Context&, Memory&);
-using Addr16Getter = void(Context::RegisterFile::*)();
+using Addr16Getter = u16(Context::RegisterFile::*)() const;
 using Addr16Setter = void(Context::RegisterFile::*)(u16);
 
 #define INSTR static void
-#define INSTRMAP(x) { OpCode::##x, &x }
 
 #ifdef DEBUG
 [[noreturn]] static void NoImpl(std::source_location loc = std::source_location::current()) {
 	std::println(stderr, "Unimplemented op code handler: {}", loc.function_name());
 	std::exit(EXIT_FAILURE);
 }
+
+static void PrintFuncName(std::source_location loc = std::source_location::current()) {
+	std::println("Function: {}", loc.function_name());
+}
+
+#define NOIMPL() NoImpl()
+#define PRINTFUNC() PrintFuncName()
+#else
+#define NOIMPL() (void*)0
+#define PRINTFUNC() (void*)0
 #endif
 
 #pragma region shorthand functions
@@ -31,7 +39,7 @@ using Addr16Setter = void(Context::RegisterFile::*)(u16);
 // and adds an mcycle.
 static byte Read(Context& cpu, Memory& mem) {
 	cpu.MCycle();
-	return mem[++cpu.reg.pc];
+	return mem[cpu.reg.pc++];
 }
 
 // Reads two bytes from memory and returns the data as a 16-bit value.
@@ -83,17 +91,40 @@ static Addr16Getter R16_GetFromBits(byte val) {
 	using rf = Context::RegisterFile;
 
 	switch (val) {
-	case 0: return static_cast<Addr16Getter>(rf::bc);
+	case 0: return &rf::bc;
+	case 1: return &rf::de;
+	case 2: return &rf::hl;
+	case 3: return &rf::spGet;
 	default: std::unreachable();
 	}
 }
 
+// Transforms a value (0-3) into a function pointer to a 16-bit register getter (stack).
 static Addr16Getter R16Stk_GetFromBits(byte val) {
+	assert(val < 4);
+	using rf = Context::RegisterFile;
 
+	switch (val) {
+	case 0: return &rf::bc;
+	case 1: return &rf::de;
+	case 2: return &rf::hl;
+	case 3: return &rf::af;
+	default: std::unreachable();
+	}
 }
 
-static Addr16Getter R16Mem_GetFromBits(byte val) {
+// Transforms a value (0-3) into a function pointer to a 16-bit register getter (memory).
+static Addr16Setter R16Mem_GetFromBits(byte val) {
+	assert(val < 4);
+	using rf = Context::RegisterFile;
 
+	switch (val) {
+	case 0: return &rf::bc;
+	case 1: return &rf::de;
+	case 2: [[fallthrough]]; // ++
+	case 3: return &rf::hl;	// --
+	default: std::unreachable();
+	}
 }
 
 #pragma endregion
@@ -105,39 +136,90 @@ INSTR cb_prefix(Context&, Memory&);
 
 INSTR nop(Context& cpu, Memory& mem) {
 	// TODO: m cycle?
+	PRINTFUNC();
 }
 
 INSTR ld_r8_r8(Context& cpu, Memory& mem) {
-	NoImpl();
+	PRINTFUNC();
+	/*
+	* ld [hl], [hl] would normally halt the cpu. it isn't handled here
+	* because ld [hl], [hl] directly corresponds to the halt instruction.
+	* non-variable instructions are handled before this function would even have
+	* a chance to run
+	*/
+
+	byte destVal = (cpu.ir & 0b00111000) >> 3;
+	byte srcVal = cpu.ir & 0b00000111;
+
+	byte& dest = R8_FromBits(cpu.reg, mem, destVal);
+	byte& src = R8_FromBits(cpu.reg, mem, srcVal);
+
+	dest = src;
+
+	cpu.MCycle();
+}
+
+INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
+	NOIMPL();
 }
 
 INSTR jp_imm16(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
 	u16 addr = Read2(cpu, mem);
 
 	cpu.reg.pc = addr;
 	cpu.MCycle();
 }
 #pragma endregion
-#pragma region prefixed (cb) instructions
-INSTR cb_prefix(Context& cpu) {
 
+#pragma region prefixed (cb) instructions
+INSTR cb_prefix(Context& cpu, Memory&) {
+	NOIMPL();
 }
 #pragma endregion
 
-static constexpr auto instrs = mapbox::eternal::map<OpCode, InstrFunc>(
+#undef INSTR
+
+using InstrPair = std::pair<OpCode, Context::InstrFunc>; // shorthand
+#define INSTRMAP(x) { OpCode::##x, &x }
+
+// Contains the mapping of op code -> handler.
+// ignoreBits sets each bit that should effectively be ignored when looking up an op code.
+struct VariableInstrData {
+	Context::InstrFunc handler;
+	OpCode op;
+	byte ignoreBits; 
+};
+#define INSTRDATA(op, byte) { &op, OpCode::##op, byte }
+
+
+// A mapping of all the instructions that do not have multiple different possible op codes
+// such as ld_r8_r8, where 6 bits can differ.
+static constexpr auto constInstrMap = mapbox::eternal::map<OpCode, Context::InstrFunc>(
 {
 	INSTRMAP(nop),
-	INSTRMAP(ld_r8_r8),
-	INSTRMAP(jp_imm16)
+	INSTRMAP(jp_imm16),
+	INSTRMAP(cb_prefix)
 });
 
-//static constexpr auto cbInstrs = mapbox::eternal::map<OpCode, InstrFunc>(
+// A mapping of all the instructions that have many possible op codes
+// Stored as an array because find_if is used on this collection, which removes any benefit
+// of using a map.
+static constexpr auto variableInstrMap = std::to_array<VariableInstrData>(
+{
+	INSTRDATA(ld_r8_r8, 0b00'111'111),
+	INSTRDATA(ld_r16_imm16, 0b00'11'0000),
+});
+
+// A mapping of all the cb instructions that have many possible op codes.
+// Stored as an array for the same reason as variableInstrMap
+//static constexpr auto cbInstrMap = std::to_array<VariableInstrData>(
 //{
 //
 //});
 
 #undef INSTRMAP
-#undef INSTR
 
 static constexpr auto InvalidInstrs = std::to_array<byte>(
 {
@@ -145,30 +227,84 @@ static constexpr auto InvalidInstrs = std::to_array<byte>(
 });
 
 bool Context::Fetch() {
-	byte nextOp = _memory[reg.pc++];
+	namespace rng = std::ranges;
+
+	ir = _memory[reg.pc++];
 	MCycle();
 
-	if (std::ranges::contains(InvalidInstrs, nextOp)) {
+	OpCode opCode = static_cast<OpCode>(ir);
+
+	// Make sure it's not a undefined op code
+	if (rng::contains(InvalidInstrs, ir)) {
 		// TODO: hang cpu
+#ifdef DEBUG
 		std::println(stderr, "CPU should hang");
+#endif
+
+		_handler = nullptr;
 		return false;
 	}
 
-	ir = nextOp;
+	// First, check if it's a non-variable instruction
+	if (auto it = constInstrMap.find(opCode); it != constInstrMap.end()) {
+#ifdef DEBUG
+		std::println("Op Code (ir): {:#010b}\tFound: {:#010b}", ir, static_cast<byte>(it->first));
+#endif
+
+		_handler = it->second;
+		return true;
+	}
+
+	// If not found, it's a variable instruction.
+	auto it = rng::find_if(
+		variableInstrMap,
+		[this](const VariableInstrData& data) {
+			byte opAsByte = static_cast<byte>(data.op);
+			byte irWithIgnore = ir & ~data.ignoreBits;
+
+			/* ex:		ir == 0b00'01'0001
+			*			op == 0b00'00'0001
+			*	ignoreBits == 0b00'11'0000 (2s complement: 0b11'00'1111)
+			* irWithIgnore == 0b00'00'0001
+			*		   res == 0b00'00'0001
+			* res == op <-- instruction found
+			*/
+			return irWithIgnore == opAsByte;
+		}
+	);
+
+	// Couldn't find a valid instruction, something went wrong.
+	if (it == variableInstrMap.end()) {
+#ifdef DEBUG
+		std::print(stderr, "Couldn't find instruction! ");
+		std::println(stderr, "Op Code (ir): {:#010b}", ir);
+#endif
+
+		_handler = nullptr;
+		return false;
+	}
+
+#ifdef DEBUG
+	std::println("Op Code (ir): {:#010b}\tFound: {:#010b}", ir, static_cast<byte>(it->op));
+#endif
+	// Store a function pointer rather than updating the ir
+	// because some instructions have variable op codes. The ir still holds the bits
+	// to determine what register / data / condition needs to be used.
+	_handler = it->handler;
 
 	return true;
 }
 
 bool Context::Exec() {
-	auto opCode = instrs.find(static_cast<OpCode>(ir));
+	if (!_handler) {
+#ifdef DEBUG
+		std::println("Invalid instruction!");
+#endif
 
-	if (opCode == instrs.end()) {
-		std::println(stderr, "Unhandled op code: {:#04x}", ir);
 		return false;
 	}
 
-	InstrFunc handler = opCode->second;
-	handler(*this, _memory);
+	_handler(*this, _memory);
 
 	return true;
 }

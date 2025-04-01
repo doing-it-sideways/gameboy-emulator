@@ -61,7 +61,7 @@ if (MSVC)
     target_link_options(${PROJECT_NAME} PUBLIC /INCREMENTAL)
 endif()
 
-target_include_directories(${PROJECT_NAME} PUBLIC include ${GG_LOCATION} include/external)
+target_include_directories(${PROJECT_NAME} PUBLIC include ${GG_LOCATION} external)
 
 # i couldn't get eternal to work as a library
 target_link_libraries(${PROJECT_NAME} PRIVATE

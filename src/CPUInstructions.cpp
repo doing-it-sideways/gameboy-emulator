@@ -132,8 +132,8 @@ static Addr16Setter R16Mem_GetFromBits(byte val) {
 	switch (val) {
 	case 0: return &rf::bc;
 	case 1: return &rf::de;
-	case 2: [[fallthrough]]; // ++ TODO
-	case 3: return &rf::hl;	 // -- TODO
+	case 2: return &rf::hlPlus;
+	case 3: return &rf::hlMinus;
 	default: std::unreachable();
 	}
 }
@@ -155,8 +155,8 @@ INSTR ld_r8_r8(Context& cpu, Memory& mem) {
 	* a chance to run
 	*/
 
-	byte destVal = (cpu.ir & 0b00111000) >> 3;
-	byte srcVal = cpu.ir & 0b00000111;
+	byte destVal = (cpu.ir & 0b00'111'000) >> 3;
+	byte srcVal = cpu.ir & 0b00000'111;
 
 	byte& dest = R8_FromBits(cpu.reg, mem, destVal);
 	byte& src = R8_FromBits(cpu.reg, mem, srcVal);
@@ -177,7 +177,16 @@ INSTR ld_r8_imm8(Context& cpu, Memory& mem) {
 }
 
 INSTR ld_acc_r16mem(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
+	Addr16Getter handle = R16_GetFromBits(destVal);
+
+	byte data = mem[(cpu.reg.*handle)()];
+	cpu.MCycle();
+
+	cpu.reg.a = data;
+	cpu.MCycle();
 }
 
 INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
@@ -279,7 +288,8 @@ bool Context::Fetch() {
 	// First, check if it's a non-variable instruction
 	if (auto it = constInstrMap.find(opCode); it != constInstrMap.end()) {
 #ifdef DEBUG
-		std::println("Op Code (ir): {:#010b}\tFound: {:#010b}", ir, static_cast<byte>(it->first));
+		std::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+					 ir, ir, static_cast<byte>(it->first), static_cast<byte>(it->first));
 #endif
 
 		_handler = it->second;
@@ -308,7 +318,7 @@ bool Context::Fetch() {
 	if (it == variableInstrMap.end()) {
 #ifdef DEBUG
 		std::print(stderr, "Couldn't find instruction! ");
-		std::println(stderr, "Op Code (ir): {:#010b}", ir);
+		std::println(stderr, "Op Code (ir): {:#010b} ({:#04x})", ir, ir);
 #endif
 
 		_handler = nullptr;
@@ -316,7 +326,8 @@ bool Context::Fetch() {
 	}
 
 #ifdef DEBUG
-	std::println("Op Code (ir): {:#010b}\tFound: {:#010b}", ir, static_cast<byte>(it->op));
+	std::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+				 ir, ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
 #endif
 	// Store a function pointer rather than updating the ir
 	// because some instructions have variable op codes. The ir still holds the bits

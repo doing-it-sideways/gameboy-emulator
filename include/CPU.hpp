@@ -100,12 +100,20 @@ public:
 		REGISTER16(d, e);
 		REGISTER16(h, l);
 
+#define HLINDIRECT(suffix, expr) \
+		constexpr u16 hl##suffix() { u16 val = hl(); hl(hl() expr 1); return val; } \
+		constexpr void hl##suffix(u16 val) { hl(val expr 1); }
+
+		HLINDIRECT(Plus, +);
+		HLINDIRECT(Minus, -);
+#undef U16GETTER
+#undef REGISTER16
+#undef HLINDIRECT
+
 		// Used in CPUInstructions.cpp: R16_Get/SetFromBits()
 		// Implementation requires a callable getter/setter for sp.
 		constexpr u16 spGet() const { return sp; }
 		constexpr void spSet(u16 val) { sp = val; }
-#undef U16GETTER
-#undef REGISTER16
 #pragma endregion
 	};
 

@@ -3,9 +3,8 @@
 
 #ifdef DEBUG
 #include <cstdlib>
-#include <cassert>
-#include <print>
 #include <source_location>
+#include "ConstexprAdditions.hpp"
 #endif
 
 #include "CPU.hpp"
@@ -18,7 +17,7 @@ using Addr16Setter = void(Context::RegisterFile::*)(u16);
 #define INSTR static void
 
 #ifdef DEBUG
-static std::string_view GetFunctionName(const std::source_location& loc) {
+constexpr static std::string_view GetFunctionName(const std::source_location& loc) {
 	std::string_view name = loc.function_name();
 	auto start = name.find("gb::cpu::");
 	auto end = name.find('(');
@@ -26,16 +25,16 @@ static std::string_view GetFunctionName(const std::source_location& loc) {
 	return name.substr(name.find("gb::cpu::") + 9, end - start - 9);
 }
 
-[[noreturn]] static void NoImpl(std::source_location loc = std::source_location::current())
-{
+[[noreturn]]
+constexpr static void NoImpl(std::source_location loc = std::source_location::current()) {
 	auto name = GetFunctionName(loc);
-	std::println(stderr, "Unimplemented op code handler: {}", name);
-	std::exit(EXIT_FAILURE);
+	debug::cexpr::println(stderr, "Unimplemented op code handler: {}", name);
+	debug::cexpr::exit(EXIT_FAILURE);
 }
 
-static void PrintFuncName(std::source_location loc = std::source_location::current()) {
+constexpr static void PrintFuncName(std::source_location loc = std::source_location::current()) {
 	auto name = GetFunctionName(loc);
-	std::println("Function: {}", name);
+	debug::cexpr::println("Function: {}", name);
 }
 
 #define NOIMPL() NoImpl()
@@ -83,7 +82,7 @@ static byte& R8_FromBits(Context::RegisterFile& regs, Memory& mem, byte val) {
 }
 
 // Transform value (0-3) into a function pointer to a 16-bit register setter for use.
-static Addr16Setter R16_SetFromBits(byte val) {
+constexpr static Addr16Setter R16_SetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
 
@@ -97,7 +96,7 @@ static Addr16Setter R16_SetFromBits(byte val) {
 }
 
 // Transforms a value (0-3) into a function pointer to a 16-bit register getter
-static Addr16Getter R16_GetFromBits(byte val) {
+constexpr static Addr16Getter R16_GetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
 
@@ -111,7 +110,7 @@ static Addr16Getter R16_GetFromBits(byte val) {
 }
 
 // Transforms a value (0-3) into a function pointer to a 16-bit register getter (stack).
-static Addr16Getter R16Stk_GetFromBits(byte val) {
+constexpr static Addr16Getter R16Stk_GetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
 
@@ -125,7 +124,7 @@ static Addr16Getter R16Stk_GetFromBits(byte val) {
 }
 
 // Transforms a value (0-3) into a function pointer to a 16-bit register getter (memory).
-static Addr16Setter R16Mem_GetFromBits(byte val) {
+constexpr static Addr16Setter R16Mem_GetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
 
@@ -189,6 +188,10 @@ INSTR ld_acc_r16mem(Context& cpu, Memory& mem) {
 	cpu.MCycle();
 }
 
+INSTR ld_r16mem_acc(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
 INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
@@ -247,9 +250,10 @@ static constexpr auto constInstrMap = mapbox::eternal::map<OpCode, Context::Inst
 static constexpr auto variableInstrMap = std::to_array<VariableInstrData>(
 {
 	INSTRDATA(ld_r8_r8, 0b00'111'111),
-	INSTRDATA(ld_r16_imm16, 0b00'11'0000),
 	INSTRDATA(ld_r8_imm8, 0b00'111'000),
-	INSTRDATA(ld_acc_r16mem, 0b00'11'0000)
+	INSTRDATA(ld_acc_r16mem, 0b00'11'0000),
+	INSTRDATA(ld_r16mem_acc, 0b00'11'0000),
+	INSTRDATA(ld_r16_imm16, 0b00'11'0000),
 });
 
 // A mapping of all the cb instructions that have many possible op codes.

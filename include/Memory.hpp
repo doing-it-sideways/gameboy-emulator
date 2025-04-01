@@ -15,6 +15,7 @@ public:
 	auto&& operator[](this auto&& self, u16 addr);
 
 private:
+	constexpr byte MBCType() const;
 
 private:
 	rom::RomData romData;

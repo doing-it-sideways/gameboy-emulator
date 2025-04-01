@@ -1,6 +1,4 @@
-#ifdef DEBUG
-#include <print>
-#endif
+#include "ConstexprAdditions.hpp"
 
 namespace gb {
 
@@ -19,17 +17,18 @@ static constexpr u16 ioEnd = 0xFF80;		// io registers ($FF00 -> $FF7F)
 static constexpr u16 hramEnd = 0xFFFF;     // High RAM (Zero page) ($FF80 -> $FFFE)
 static constexpr u16 regIE = 0xFFFF;     // Interrupt enable register ($FFFF)
 
+constexpr byte Memory::MBCType() const {
+	return 0;
+}
+
 auto&& Memory::operator[](this auto&& self, u16 addr) {
 	if (addr < romNEnd) // rom data
 		return self.romData[addr];
 
 	// TODO: all other memory locations
-#ifdef DEBUG
-	std::println("Unimplemented memory access at {:#06x}", addr);
-	std::exit(EXIT_FAILURE);
-#else
-	return 0;
-#endif
+	debug::cexpr::println("Unimplemented memory access at {:#06x}", addr);
+	debug::cexpr::exit(EXIT_FAILURE);
+	std::unreachable();
 }
 
 } // namespace gb

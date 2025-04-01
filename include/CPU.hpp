@@ -101,7 +101,11 @@ public:
 		REGISTER16(h, l);
 
 #define HLINDIRECT(suffix, expr) \
-		constexpr u16 hl##suffix() { u16 val = hl(); hl(hl() expr 1); return val; } \
+		constexpr u16 hl##suffix() { \
+			u16 val = hl(); \
+			hl(hl() expr 1); \
+			return val; \
+		} \
 		constexpr void hl##suffix(u16 val) { hl(val expr 1); }
 
 		HLINDIRECT(Plus, +);

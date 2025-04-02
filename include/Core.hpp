@@ -2,6 +2,7 @@
 
 #include <bit>
 #include <cstdint>
+#include <cassert>
 
 #if defined(DEBUG) && defined(__cpp_lib_debugging)
 #include <debugging>

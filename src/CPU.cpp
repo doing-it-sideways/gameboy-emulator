@@ -28,7 +28,7 @@ void Context::Run() {
 		}
 
 		if (!Update()) {
-			std::println(stderr, "Something went wrong!");
+			debug::cexpr::println(stderr, "Something went wrong!");
 			return;
 		}
 	}
@@ -70,7 +70,7 @@ void Context::Inc(u16 reg16) {
 		reg.hl(val + 1);
 #ifdef DEBUG
 	else {
-		std::println(stderr, "Unknown register!");
+		debug::cexpr::println(stderr, "Unknown register!");
 		BREAKPOINT;
 	}
 #endif
@@ -86,21 +86,20 @@ void Context::Dec(u16 reg16) {
 		reg.hl(val - 1);
 #ifdef DEBUG
 	else {
-		std::println(stderr, "Unknown register!");
+		debug::cexpr::println(stderr, "Unknown register!");
 		BREAKPOINT;
 	}
-#endif
+#endif // DEBUG
 }
 
-#ifdef DEBUG
 void Context::Dump() const {
-	std::println("\n---Current CPU State---");
-	std::println("pc ({:#06x}): {:#04x}", reg.pc, _memory[reg.pc]);
-	std::println("flags: {:04b}", reg.f >> 4);
-	std::println("registers: a: {:#04x}, bc: {:#06x}, de: {:#06x}, hl: {:#06x}",
+	debug::cexpr::println("\n---Current CPU State---");
+	byte data = _memory[reg.pc];
+	debug::cexpr::println("pc ({:#06x}): {:#04x}", reg.pc, data);
+	debug::cexpr::println("flags: {:04b}", reg.f >> 4);
+	debug::cexpr::println("registers: a: {:#04x}, bc: {:#06x}, de: {:#06x}, hl: {:#06x}",
 				 reg.a, reg.bc(), reg.de(), reg.hl());
-	std::println("ir: {:#010b}\tie: {:#010b}\n", ir, ie);
+	debug::cexpr::println("ir: {:#010b}\tie: {:#010b}\n", ir, ie);
 }
-#endif // DEBUG
 
 } // namespace gb::cpu

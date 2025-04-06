@@ -58,10 +58,10 @@ static u16 Read2(Context& cpu, Memory& mem) {
 	byte lo = mem[cpu.reg.pc++];
 	cpu.MCycle();
 
-	byte hi = mem[cpu.reg.pc++];
+	u16 hi = mem[cpu.reg.pc++];
 	cpu.MCycle();
 
-	return static_cast<u16>(hi) << 8 | lo;
+	return hi << 8 | lo;
 }
 
 // Transform value (0-7) into an 8-bit register for use.
@@ -281,9 +281,7 @@ bool Context::Fetch() {
 	// Make sure it's not a undefined op code
 	if (rng::contains(InvalidInstrs, ir)) {
 		// TODO: hang cpu
-#ifdef DEBUG
-		std::println(stderr, "CPU should hang");
-#endif
+		debug::cexpr::println(stderr, "CPU should hang");
 
 		_handler = nullptr;
 		return false;
@@ -291,10 +289,8 @@ bool Context::Fetch() {
 
 	// First, check if it's a non-variable instruction
 	if (auto it = constInstrMap.find(opCode); it != constInstrMap.end()) {
-#ifdef DEBUG
-		std::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
-					 ir, ir, static_cast<byte>(it->first), static_cast<byte>(it->first));
-#endif
+		debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+							  ir, ir, static_cast<byte>(it->first), static_cast<byte>(it->first));
 
 		_handler = it->second;
 		return true;
@@ -320,19 +316,15 @@ bool Context::Fetch() {
 
 	// Couldn't find a valid instruction, something went wrong.
 	if (it == variableInstrMap.end()) {
-#ifdef DEBUG
-		std::print(stderr, "Couldn't find instruction! ");
-		std::println(stderr, "Op Code (ir): {:#010b} ({:#04x})", ir, ir);
-#endif
+		debug::cexpr::print(stderr, "Couldn't find instruction! ");
+		debug::cexpr::println(stderr, "Op Code (ir): {:#010b} ({:#04x})", ir, ir);
 
 		_handler = nullptr;
 		return false;
 	}
 
-#ifdef DEBUG
-	std::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
-				 ir, ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
-#endif
+	debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+						  ir, ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
 	// Store a function pointer rather than updating the ir
 	// because some instructions have variable op codes. The ir still holds the bits
 	// to determine what register / data / condition needs to be used.
@@ -343,10 +335,7 @@ bool Context::Fetch() {
 
 bool Context::Exec() {
 	if (!_handler) {
-#ifdef DEBUG
-		std::println("Invalid instruction!");
-#endif
-
+		debug::cexpr::println("Invalid instruction!");
 		return false;
 	}
 

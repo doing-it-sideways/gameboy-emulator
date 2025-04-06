@@ -5,6 +5,7 @@ namespace gb {
 
 Memory::Memory(rom::RomData&& data)
 	: _romData(std::move(data))
+	, _extraROMBanks(1 << _romData[0x0148])
 {
 	byte cartridgeType = _romData[0x0147];
 

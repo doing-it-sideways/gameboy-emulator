@@ -7,13 +7,31 @@
 namespace gb {
 
 class Memory {
+	// Allows operator[] to work properly
+	class Accessor {
+	public:
+		constexpr Accessor(Memory* base, u16 addr) : _base(*base), _addr(addr) {}
+
+		// Handles reading data
+		constexpr operator byte&() { return _base.Read(_addr); }
+		constexpr byte operator()() { return static_cast<byte>(*this); }
+
+		// Handles writing data
+		constexpr Accessor& operator=(byte data) { _base.Write(_addr, data); return *this; }
+
+	private:
+		Memory& _base;
+		u16 _addr;
+	};
+
 public:
 	Memory(rom::RomData&& data);
 
-	// C++23 feature that allows explicit object params, which in this case,
-	// handles const/non-const in one function. Downside is because of auto,
-	// it has to be inlined, so implementation is included in .cxx
-	constexpr auto&& operator[](this auto&& self, u16 addr);
+	template <typename Self>
+	constexpr auto operator[](this Self&& self, u16 addr);
+
+	constexpr byte& Read(u16 addr);
+	constexpr void Write(u16 addr, byte val);
 
 private:
 	enum class MapperChip : byte {
@@ -30,11 +48,17 @@ private:
 		HuC3,
 		MMM01,
 		TAMA5,
-		UNKNOWN = ~0
+		UNKNOWN = 255
 	};
 
 private:
+	// Shorthand function without deducing this because it was causing issues :/
+	constexpr Accessor Access(u16 addr) { return Accessor{ this, addr }; }
+
+private:
 	rom::RomData _romData;
+
+	u16 _extraROMBanks = 0;
 	MapperChip _mapperChip = MapperChip::UNKNOWN;
 };
 

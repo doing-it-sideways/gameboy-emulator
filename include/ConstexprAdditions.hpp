@@ -33,7 +33,7 @@ constexpr void print(std::format_string<Args...> fmt, Args&&... args) {
 	if (std::is_constant_evaluated())
 		NOP;
 	else
-		std::print(fmt, args...);
+		std::print(fmt, std::forward<Args>(args)...);
 }
 
 template <class... Args>
@@ -41,7 +41,7 @@ constexpr void print(std::FILE* stream, std::format_string<Args...> fmt, Args&&.
 	if (std::is_constant_evaluated())
 		NOP;
 	else
-		std::print(stream, fmt, args...);
+		std::print(stream, fmt, std::forward<Args>(args)...);
 }
 
 template <class... Args>
@@ -49,7 +49,7 @@ constexpr void println(std::format_string<Args...> fmt, Args&&... args) {
 	if (std::is_constant_evaluated())
 		NOP;
 	else
-		std::println(fmt, args...);
+		std::println(fmt, std::forward<Args>(args)...);
 }
 
 template <class... Args>
@@ -57,7 +57,7 @@ constexpr void println(std::FILE* stream, std::format_string<Args...> fmt, Args&
 	if (std::is_constant_evaluated())
 		NOP;
 	else
-		std::println(stream, fmt, args...);
+		std::println(stream, fmt, std::forward<Args>(args)...);
 }
 
 } // namespace debug::cexpr

@@ -47,7 +47,7 @@ std::optional<RomData> Load(const std::filesystem::path& romPath) {
 	// from here, do the checksum to make sure it's actually a gb rom
 	auto romSize = std::filesystem::file_size(romPath);
 
-	if (romSize < 0x14F) // too small to even have a header
+	if (romSize < 0x0150) // too small to even have a header
 		return std::nullopt;
 
 	if (romSize > (1 << 25)) // too big to be considered a gameboy rom no way

@@ -10,11 +10,11 @@ class Memory {
 	// Allows operator[] to work properly
 	class Accessor {
 	public:
-		constexpr Accessor(Memory* base, u16 addr) : _base(*base), _addr(addr) {}
+		constexpr Accessor(Memory& base, u16 addr) : _base(base), _addr(addr) {}
 
 		// Handles reading data
-		constexpr operator byte&() { return _base.Read(_addr); }
-		constexpr byte operator()() { return static_cast<byte>(*this); }
+		constexpr byte& operator()() { return _base.Read(_addr); }
+		constexpr operator byte&() { return this->operator()(); }
 
 		// Handles writing data
 		constexpr Accessor& operator=(byte data) { _base.Write(_addr, data); return *this; }
@@ -50,10 +50,6 @@ private:
 		TAMA5,
 		UNKNOWN = 255
 	};
-
-private:
-	// Shorthand function without deducing this because it was causing issues :/
-	constexpr Accessor Access(u16 addr) { return Accessor{ this, addr }; }
 
 private:
 	rom::RomData _romData;

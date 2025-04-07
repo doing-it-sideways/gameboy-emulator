@@ -22,7 +22,7 @@ constexpr auto Memory::operator[](this Self&& self, u16 addr) {
 		return val;
 	}
 	else
-		return self.Access(addr);
+		return Accessor{ self, addr };
 }
 
 constexpr byte& Memory::Read(u16 addr) {

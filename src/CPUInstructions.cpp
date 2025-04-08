@@ -64,19 +64,45 @@ static u16 Read2(Context& cpu, Memory& mem) {
 	return hi << 8 | lo;
 }
 
+// Wrapper struct so that indirect hl access gets handled properly for 8-bit registers
+struct R8Reg {
+	Memory& mem;
+	byte& reg;
+	const bool isIndirectHL;
+
+	constexpr R8Reg(Memory& memory, byte& val, bool isHL = false)
+		: mem(memory)
+		, reg(val)
+		, isIndirectHL(isHL) {}
+
+	constexpr R8Reg& operator=(byte data) {
+		if (isIndirectHL)
+			mem.Write(reg, data);
+		else
+			reg = data;
+
+		return *this;
+	}
+
+	constexpr R8Reg& operator=(R8Reg& other) { return this->operator=(other.reg); }
+};
+
 // Transform value (0-7) into an 8-bit register for use.
-static byte& R8_FromBits(Context::RegisterFile& regs, Memory& mem, byte val) {
+static R8Reg R8_FromBits(Context::RegisterFile& regs, Memory& mem, byte val) {
 	assert(val < 8);
 
 	switch (val) {
-	case 0: return regs.b;
-	case 1: return regs.c;
-	case 2: return regs.d;
-	case 3: return regs.e;
-	case 4: return regs.h;
-	case 5: return regs.l;
-	case 6: return mem[regs.hl()]; // load byte stored in the location pointed to by hl
-	case 7: return regs.a;
+	case 0: return { mem, regs.b };
+	case 1: return { mem, regs.c };
+	case 2: return { mem, regs.d };
+	case 3: return { mem, regs.e };
+	case 4: return { mem, regs.h };
+	case 5: return { mem, regs.l };
+		  
+	// Load byte stored in the location pointed to by hl
+	case 6: return { mem, mem[regs.hl()], true };
+
+	case 7: return { mem, regs.a };
 	default: std::unreachable();
 	}
 }
@@ -157,8 +183,8 @@ INSTR ld_r8_r8(Context& cpu, Memory& mem) {
 	byte destVal = (cpu.ir & 0b00'111'000) >> 3;
 	byte srcVal = cpu.ir & 0b00000'111;
 
-	byte& dest = R8_FromBits(cpu.reg, mem, destVal);
-	byte& src = R8_FromBits(cpu.reg, mem, srcVal);
+	R8Reg dest = R8_FromBits(cpu.reg, mem, destVal);
+	R8Reg src = R8_FromBits(cpu.reg, mem, srcVal);
 
 	dest = src;
 
@@ -169,7 +195,7 @@ INSTR ld_r8_imm8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	byte destVal = (cpu.ir & 0b00'111'000) >> 3;
-	byte& reg = R8_FromBits(cpu.reg, mem, destVal);
+	R8Reg reg = R8_FromBits(cpu.reg, mem, destVal);
 
 	reg = Read(cpu, mem);
 	cpu.MCycle();

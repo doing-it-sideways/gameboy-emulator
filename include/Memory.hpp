@@ -7,35 +7,13 @@
 namespace gb {
 
 class Memory {
-	// Allows operator[] to work properly
-	class Accessor {
-	public:
-		constexpr Accessor(Memory& base, u16 addr) : _base(base), _addr(addr) {}
-
-		// Handles reading data
-		constexpr byte& operator()() { return _base.Read(_addr); }
-		constexpr operator byte&() { return this->operator()(); }
-
-		// Handles writing data
-		constexpr Accessor& operator=(byte data) { _base.Write(_addr, data); return *this; }
-
-	private:
-		Memory& _base;
-		u16 _addr;
-	};
-
 public:
-	Memory(rom::RomData&& data);
+	// Same as RomData but name for clarity
+	using MemData = std::vector<byte>;
 
-	template <typename Self>
-	constexpr auto operator[](this Self&& self, u16 addr);
-
-	constexpr byte& Read(u16 addr);
-	constexpr void Write(u16 addr, byte val);
-
-private:
 	enum class MapperChip : byte {
-		ROM_ONLY = 0,
+		UNKNOWN,
+		ROM_ONLY,
 		MBC1,
 		MBC2,
 		MBC3,
@@ -47,15 +25,49 @@ private:
 		HuC1,
 		HuC3,
 		MMM01,
-		TAMA5,
-		UNKNOWN = 255
+		TAMA5
 	};
+
+public:
+	Memory(rom::RomData&& data);
+
+	template <typename Self>
+	auto operator[](this Self&& self, u16 addr);
+
+	byte& Read(u16 addr);
+	void Write(u16 addr, byte val);
+
+	MemData Dump() const; // TODO
+
+private:
+	// Allows operator[] to work properly
+	class Accessor {
+	public:
+		Accessor(Memory& base, u16 addr) : _base(base), _addr(addr) {}
+
+		// Handles reading data
+		byte& operator()() const { return _base.Read(_addr); }
+		operator byte&() const { return this->operator()(); }
+
+		// Handles writing data
+		Accessor& operator=(byte data) { _base.Write(_addr, data); return *this; }
+
+	private:
+		Memory& _base;
+		u16 _addr;
+	};
+
+private:
+	// TODO: funcs for setting up rom/ram values/registers/etc
 
 private:
 	rom::RomData _romData;
 
-	u16 _extraROMBanks = 0;
-	MapperChip _mapperChip = MapperChip::UNKNOWN;
+	MemData _ramDataCart; // cartridge ram
+
+	const u16 _romBanks = 0;  // rom banks on the cartridge
+	const u8 _ramBanks = 0; // ram banks on the cartridge
+	const MapperChip _mapperChip = MapperChip::UNKNOWN;
 };
 
 } // namespace gb

@@ -64,7 +64,7 @@ public:
 			return Zero << 7 | Subtract << 6 | HalfCarry << 5 | Carry << 4;
 		}
 
-		constexpr Flags& operator=(byte b) {
+		Flags& operator=(byte b) {
 			Zero = b & (1 << 7) ? 1 : 0;
 			Subtract = b & (1 << 6) ? 1 : 0;
 			HalfCarry = b & (1 << 5) ? 1 : 0;
@@ -85,28 +85,30 @@ public:
 		byte h, l;
 
 #pragma region 16 bit register definitions
-#define U16GETTER(r1, r2) \
-		constexpr u16 r1##r2() const { return (static_cast<u16>(r1) << 8) + r2; }
+		// const & non-const versions because of hl+ and hl- :/
+#define U16GETTERS(r1, r2) \
+		constexpr u16 r1##r2() const { return (static_cast<u16>(r1) << 8) + r2; } \
+		constexpr u16 r1##r2() { return (static_cast<u16>(r1) << 8) + r2; }
 
 #define REGISTER16(r1, r2) \
-		U16GETTER(r1, r2) \
+		U16GETTERS(r1, r2) \
 		constexpr void r1##r2(u16 val) { \
 			r1 = static_cast<u8>((val & 0xFF00) >> 8); \
 			r2 = static_cast<u8>(val & 0x00FF); \
 		}
 
-		U16GETTER(a, f); // low byte undefined for af, dont allow setting
-		REGISTER16(b, c);
-		REGISTER16(d, e);
-		REGISTER16(h, l);
-
 #define HLINDIRECT(suffix, expr) \
 		constexpr u16 hl##suffix() { \
 			u16 val = hl(); \
-			hl(hl() expr 1); \
+			hl(val expr 1); \
 			return val; \
 		} \
 		constexpr void hl##suffix(u16 val) { hl(val expr 1); }
+
+		U16GETTERS(a, f); // low byte undefined for af, dont allow setting
+		REGISTER16(b, c);
+		REGISTER16(d, e);
+		REGISTER16(h, l);
 
 		HLINDIRECT(Plus, +);
 		HLINDIRECT(Minus, -);
@@ -114,7 +116,6 @@ public:
 #undef REGISTER16
 #undef HLINDIRECT
 
-		// Used in CPUInstructions.cpp: R16_Get/SetFromBits()
 		// Implementation requires a callable getter/setter for sp.
 		constexpr u16 spGet() const { return sp; }
 		constexpr void spSet(u16 val) { sp = val; }

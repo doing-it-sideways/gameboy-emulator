@@ -9,3 +9,4 @@ If you're curious on what resources I'm using to do this, here's a non-exhaustiv
 - [CPU Op Code Mappings](https://gbdev.io/gb-opcodes/optables/)
 - [CPU Instruction Explanations](https://rgbds.gbdev.io/docs/v0.9.1/gbz80.7#LD_r8,r8https://rgbds.gbdev.io/docs/v0.9.1/gbz80.7)
 - [GameBoy Emulation in JavaScript](https://imrannazar.com/series/gameboy-emulation-in-javascript/input)
+- [Blargg's test ROMs](https://gbdev.gg8.se/files/roms/blargg-gb-tests/)

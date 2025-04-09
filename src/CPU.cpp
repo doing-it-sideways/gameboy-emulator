@@ -1,8 +1,5 @@
 #include "CPU.hpp"
-
-#ifdef DEBUG
-#include <print>
-#endif
+#include "ConstexprAdditions.hpp"
 
 namespace gb::cpu {
 
@@ -10,7 +7,8 @@ namespace gb::cpu {
 // DMG -- todo?: allow for different cpus: DMG0, MGB, maybe CGB support later?
 Context::Context(rom::RomData&& romData)
 	: reg{ .pc = 0x0100, .sp = 0xFFFE,
-	       .a = 0x01, .f = 0b10110000, .c = 0x13, .d = 0, .e = 0xD8, .h = 0x01, .l = 0x4D }
+		   .a = 0x01, .f = { 1, 0, 1, 1 },
+		   .c = 0x13, .d = 0, .e = 0xD8, .h = 0x01, .l = 0x4D }
 	, ir(romData[0x0100])
 	, ie(0x00)
 	, _memory(std::move(romData))

@@ -12,6 +12,7 @@
 namespace gb::cpu {
 
 using Addr16Getter = u16(Context::RegisterFile::*)() const;
+using Addr16MemGetter = u16(Context::RegisterFile::*)();
 using Addr16Setter = void(Context::RegisterFile::*)(u16);
 
 #define INSTR static void
@@ -19,50 +20,30 @@ using Addr16Setter = void(Context::RegisterFile::*)(u16);
 #ifdef DEBUG
 constexpr static std::string_view GetFunctionName(const std::source_location& loc) {
 	std::string_view name = loc.function_name();
-	auto start = name.find("gb::cpu::");
-	auto end = name.find('(');
+	std::size_t start = name.find("gb::cpu::");
+	std::size_t end = name.find('(');
 
 	return name.substr(name.find("gb::cpu::") + 9, end - start - 9);
 }
 
 [[noreturn]]
 constexpr static void NoImpl(std::source_location loc = std::source_location::current()) {
-	auto name = GetFunctionName(loc);
+	std::string_view name = GetFunctionName(loc);
 	debug::cexpr::println(stderr, "Unimplemented op code handler: {}", name);
 	debug::cexpr::exit(EXIT_FAILURE);
 }
 
 constexpr static void PrintFuncName(std::source_location loc = std::source_location::current()) {
-	auto name = GetFunctionName(loc);
+	std::string_view name = GetFunctionName(loc);
 	debug::cexpr::println("Function: {}", name);
 }
 
 #define NOIMPL() NoImpl()
 #define PRINTFUNC() PrintFuncName()
-#else
-#define NOIMPL() (void*)0
-#define PRINTFUNC() (void*)0
-#endif
-
-#pragma region shorthand functions
-// Reads one byte from the memory, increments the program counter
-// and adds an mcycle.
-static byte Read(Context& cpu, Memory& mem) {
-	cpu.MCycle();
-	return mem[cpu.reg.pc++];
-}
-
-// Reads two bytes from memory and returns the data as a 16-bit value.
-// Increments program counter twice and adds two mcycles.
-static u16 Read2(Context& cpu, Memory& mem) {
-	byte lo = mem[cpu.reg.pc++];
-	cpu.MCycle();
-
-	u16 hi = mem[cpu.reg.pc++];
-	cpu.MCycle();
-
-	return hi << 8 | lo;
-}
+#else // DEBUG
+#define NOIMPL() (void)0
+#define PRINTFUNC() (void)0
+#endif // DEBUG
 
 // Wrapper struct so that indirect hl access gets handled properly for 8-bit registers
 struct R8Reg {
@@ -73,7 +54,8 @@ struct R8Reg {
 	constexpr R8Reg(Memory& memory, byte& val, bool isHL = false)
 		: mem(memory)
 		, reg(val)
-		, isIndirectHL(isHL) {}
+		, isIndirectHL(isHL)
+	{}
 
 	constexpr R8Reg& operator=(byte data) {
 		if (isIndirectHL)
@@ -87,6 +69,7 @@ struct R8Reg {
 	constexpr R8Reg& operator=(R8Reg& other) { return this->operator=(other.reg); }
 };
 
+#pragma region value retrieving functions
 // Transform value (0-7) into an 8-bit register for use.
 static R8Reg R8_FromBits(Context::RegisterFile& regs, Memory& mem, byte val) {
 	assert(val < 8);
@@ -135,6 +118,34 @@ constexpr static Addr16Getter R16_GetFromBits(byte val) {
 	}
 }
 
+// Transforms a value (0-3) into a function pointer to a 16-bit register getter (memory).
+constexpr static Addr16Setter R16Mem_SetFromBits(byte val) {
+	assert(val < 4);
+	using rf = Context::RegisterFile;
+
+	switch (val) {
+	case 0: return &rf::bc;
+	case 1: return &rf::de;
+	case 2: return &rf::hlPlus;
+	case 3: return &rf::hlMinus;
+	default: std::unreachable();
+	}
+}
+
+// Transforms a value (0-3) into a function pointer to a 16-bit register getter (memory).
+constexpr static Addr16MemGetter R16Mem_GetFromBits(byte val) {
+	assert(val < 4);
+	using rf = Context::RegisterFile;
+
+	switch (val) {
+	case 0: return &rf::bc;
+	case 1: return &rf::de;
+	case 2: return &rf::hlPlus;
+	case 3: return &rf::hlMinus;
+	default: std::unreachable();
+	}
+}
+
 // Transforms a value (0-3) into a function pointer to a 16-bit register getter (stack).
 constexpr static Addr16Getter R16Stk_GetFromBits(byte val) {
 	assert(val < 4);
@@ -149,18 +160,23 @@ constexpr static Addr16Getter R16Stk_GetFromBits(byte val) {
 	}
 }
 
-// Transforms a value (0-3) into a function pointer to a 16-bit register getter (memory).
-constexpr static Addr16Setter R16Mem_GetFromBits(byte val) {
-	assert(val < 4);
-	using rf = Context::RegisterFile;
+// Reads one byte from the memory, increments the program counter
+// and adds an mcycle.
+static byte Read(Context& cpu, Memory& mem) {
+	cpu.MCycle();
+	return mem[cpu.reg.pc++];
+}
 
-	switch (val) {
-	case 0: return &rf::bc;
-	case 1: return &rf::de;
-	case 2: return &rf::hlPlus;
-	case 3: return &rf::hlMinus;
-	default: std::unreachable();
-	}
+// Reads two bytes from memory and returns the data as a 16-bit value.
+// Increments program counter twice and adds two mcycles.
+static u16 Read2(Context& cpu, Memory& mem) {
+	byte lo = mem[cpu.reg.pc++];
+	cpu.MCycle();
+
+	u16 hi = mem[cpu.reg.pc++];
+	cpu.MCycle();
+
+	return hi << 8 | lo;
 }
 
 #pragma endregion
@@ -205,7 +221,7 @@ INSTR ld_acc_r16mem(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
-	Addr16Getter handle = R16_GetFromBits(destVal);
+	Addr16MemGetter handle = R16Mem_GetFromBits(destVal);
 
 	byte data = mem[(cpu.reg.*handle)()];
 	cpu.MCycle();

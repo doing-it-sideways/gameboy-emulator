@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "Core.hpp"
+#include "ROM.hpp"
 
 namespace gb {
 
@@ -14,7 +15,7 @@ enum class MemType : byte {
 
 class MemoryBank {
 public:
-	MemoryBank(MemType type, u8 banks = 1);
+	MemoryBank(rom::RomData& fullMem, MemType type);
 
 	// TODO: VS 17.14, change back to operator[]. intellisense breaks all syntax highlighting
 	// because they forgot to add support for templated multidimensional subscript operator.
@@ -24,12 +25,14 @@ public:
 
 	inline u8 Banks() const { return _banks; }
 
+	std::vector<byte> Dump() const; // TODO
+
 private:
 	byte& GetRom(u8 bank, u16 addr);
 	byte& GetRam(u8 bank, u16 addr);
 
 private:
-	std::vector<byte> _data;
+	rom::RomData& _fullMem;
 	const MemType _type;
 	const u8 _banks;
 };

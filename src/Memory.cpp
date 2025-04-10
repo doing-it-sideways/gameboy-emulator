@@ -58,16 +58,6 @@ static constexpr u16 bankingModeEnd = 0x8000;
 
 } // namespace mbc1
 
-static u8 GetRamBanks(byte ramBankCode) {
-	switch (ramBankCode) {
-	case 2: return 1;
-	case 3: return 4;
-	case 4: return 16;
-	case 5: return 8;
-	default: return 0;
-	}
-}
-
 static MapperChip GetMapperChip(byte cartridgeType) {
 	switch (cartridgeType) {
 	case 0x00:
@@ -116,9 +106,9 @@ Memory::Memory(rom::RomData&& data)
 	: _romData(std::move(data))
 
 	// first rom bank is always stored in rom data, so dont duplicate space
-	, _romBanksCart(MemType::ROM, (2 << _romData[0x0148]) - 1)
+	, _romBanksCart(_romData, MemType::ROM)
 
-	, _ramDataCart(MemType::RAM, GetRamBanks(_romData[0x0149]))
+	, _ramDataCart(_romData, MemType::RAM)
 	, _mapperChip(GetMapperChip(_romData[0x0147]))
 {}
 
@@ -130,7 +120,8 @@ byte& Memory::Read(u16 addr) {
 	else if (_mapperChip == MapperChip::MBC1) {
 		if (addr < rom0End) {
 			if (mbc1::reg::mode == 0)
-				return _romData[addr];
+				return _romBanksCart.Access(0, addr);
+				//return _romData[addr];
 
 			// mode 1 behavior
 			u8 bankNum = mbc1::reg::bankNum.bank2;
@@ -138,8 +129,6 @@ byte& Memory::Read(u16 addr) {
 			return _romBanksCart.Access(bankNum - 1, addr);
 		}
 		else if (addr < romNEnd) {
-			addr &= 0x3FFF; // only first 13 bits are used
-
 			u8 bankNum = mbc1::reg::bankNum();
 			return _romBanksCart.Access(bankNum - 1, addr);
 		}
@@ -155,7 +144,7 @@ void Memory::Write(u16 addr, byte val) {
 	if (_mapperChip == MapperChip::MBC1) {
 		if (addr < mbc1::ramEnableEnd) {
 			val &= 0xF;
-			mbc1::reg::ramEnabled = (val == 0b1010);				
+			mbc1::reg::ramEnabled = (val == 0b1010);
 		}
 		else if (addr < mbc1::romBank1End) {
 			val = std::max<byte>(val & 0b11111, 1);
@@ -169,10 +158,11 @@ void Memory::Write(u16 addr, byte val) {
 			mbc1::reg::mode = val & 1;
 		}
 	}
-
-	debug::cexpr::println("Unimplemented or invalid memory write at {:#06x}", addr);
-	debug::cexpr::exit(EXIT_FAILURE);
-	std::unreachable();
+	else {
+		debug::cexpr::println("Unimplemented or invalid memory write at {:#06x}", addr);
+		debug::cexpr::exit(EXIT_FAILURE);
+		std::unreachable();
+	}
 }
 
 } // namespace gb

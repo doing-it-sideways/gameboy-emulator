@@ -24,11 +24,16 @@ static constexpr u8 GetRamBanks(byte ramBankCode) {
 	}
 }
 
+static MemType IsROMMulticart(const rom::RomData& data) {
+	// TODO -- detect mbc1 multicarts
+	return MemType::ROM;
+}
+
 MemoryBank::MemoryBank(rom::RomData& fullMem, MemType type)
 	//: _data(GetDataSize(type, banks))
 	: _fullMem(fullMem)
-	, _type(type)
-	, _banks(type == MemType::ROM ? 2 << fullMem[0x0148] : GetRamBanks(fullMem[0x0149]))
+	, _type(type == MemType::RAM ? type : IsROMMulticart(fullMem))
+	, _banks(type == MemType::RAM ? GetRamBanks(fullMem[0x0149]) : 2 << fullMem[0x0148])
 {}
 
 byte& MemoryBank::GetRom(u8 bank, u16 addr) {

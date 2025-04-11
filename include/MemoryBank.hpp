@@ -10,6 +10,7 @@ namespace gb {
 
 enum class MemType : byte {
 	ROM,
+	ROM_MULTICART,
 	RAM
 };
 

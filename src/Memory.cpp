@@ -126,11 +126,11 @@ byte& Memory::Read(u16 addr) {
 			// mode 1 behavior
 			u8 bankNum = mbc1::reg::bankNum.bank2;
 			bankNum <<= 5; // [20-19]: bank2, [18-14]: 0b00000
-			return _romBanksCart.Access(bankNum - 1, addr);
+			return _romBanksCart.Access(bankNum, addr);
 		}
 		else if (addr < romNEnd) {
 			u8 bankNum = mbc1::reg::bankNum();
-			return _romBanksCart.Access(bankNum - 1, addr);
+			return _romBanksCart.Access(bankNum, addr);
 		}
 	}
 

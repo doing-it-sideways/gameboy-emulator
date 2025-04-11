@@ -26,7 +26,6 @@ enum class MapperChip : byte {
 };
 
 class Memory {
-
 public:
 	Memory(rom::RomData&& data);
 

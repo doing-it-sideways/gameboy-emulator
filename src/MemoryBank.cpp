@@ -2,15 +2,15 @@
 
 namespace gb {
 
-// 1 << (1 + total bits used for address)
-static constexpr u64 romBankSize = 1 << 14;
-static constexpr u64 ramBankSize = 1 << 13;
-
 static constexpr u64 GetDataSize(MemType type, u8 banks) {
 	switch (type) {
-	case MemType::ROM: return romBankSize * banks;
-	case MemType::RAM: return ramBankSize * banks;
-	default: std::unreachable();
+	case MemType::ROM:
+	case MemType::ROM_MULTICART:
+		return static_cast<u64>(romBankSize) * banks;
+	case MemType::RAM:
+		return static_cast<u64>(ramBankSize) * banks;
+	default:
+		std::unreachable();
 	}
 }
 
@@ -24,15 +24,15 @@ static constexpr u8 GetRamBanks(byte ramBankCode) {
 	}
 }
 
-static MemType IsROMMulticart(const rom::RomData& data) {
+static MemType IsRomMulticart(const rom::RomData& data) {
 	// TODO -- detect mbc1 multicarts
 	return MemType::ROM;
 }
 
 MemoryBank::MemoryBank(rom::RomData& fullMem, MemType type)
 	//: _data(GetDataSize(type, banks))
-	: _fullMem(fullMem)
-	, _type(type == MemType::RAM ? type : IsROMMulticart(fullMem))
+	: _romData(fullMem)
+	, _type(type == MemType::RAM ? type : IsRomMulticart(fullMem))
 	, _banks(type == MemType::RAM ? GetRamBanks(fullMem[0x0149]) : 2 << fullMem[0x0148])
 {}
 
@@ -40,13 +40,12 @@ byte& MemoryBank::GetRom(u8 bank, u16 addr) {
 	// bank num [20-14] | addr [13-0]
 	u32 physicalAddr = (static_cast<u32>(bank) << 14) | (addr & 0x3FFF);
 
-	return _fullMem[physicalAddr];
+	return _romData[physicalAddr];
 }
 
 byte& MemoryBank::GetRam(u8 bank, u16 addr) {
 	// TODO
-	return _fullMem[0];
+	return _romData[0];
 }
-
 
 } // namespace gb

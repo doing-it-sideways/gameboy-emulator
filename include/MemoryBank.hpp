@@ -13,7 +13,7 @@ enum class MemType : byte {
 	ROM_MULTICART,
 	RAM
 };
-
+// TODO: make this an interface -- one impl for rom, one for ram
 class MemoryBank {
 public:
 	MemoryBank(rom::RomData& fullMem, MemType type);
@@ -33,7 +33,7 @@ private:
 	byte& GetRam(u8 bank, u16 addr);
 
 private:
-	rom::RomData& _fullMem;
+	rom::RomData& _romData;
 	const MemType _type;
 	const u8 _banks;
 };

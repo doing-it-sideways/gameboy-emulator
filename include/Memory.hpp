@@ -1,33 +1,19 @@
 #pragma once
 
+#include <array>
+#include <memory>
 #include <vector>
 
 #include "Core.hpp"
+#include "MapperChipInfo.hpp"
 #include "MemoryBank.hpp"
 #include "ROM.hpp"
 
 namespace gb {
 
-enum class MapperChip : byte {
-	UNKNOWN,
-	ROM_ONLY,
-	MBC1,
-	MBC2,
-	MBC3,
-	MBC30,
-	MBC4,
-	MBC5,
-	MBC6,
-	MBC7,
-	HuC1,
-	HuC3,
-	MMM01,
-	TAMA5
-};
-
 class Memory {
 public:
-	Memory(rom::RomData&& data);
+	explicit Memory(rom::RomData&& data);
 
 	template <typename Self>
 	auto operator[](this Self&& self, u16 addr);
@@ -60,6 +46,10 @@ private:
 
 private:
 	rom::RomData _romData;
+	std::vector<byte> _ramInternal; // no gbc support yet, size always 0x2000
+	std::array<byte, 0x80> _hram; // high ram / zero page. 
+
+	std::unique_ptr<IMapperInfo> _mapperChipData;
 
 	MemoryBank _romBanksCart; // extra cartridge rom
 	MemoryBank _ramDataCart;  // cartridge ram

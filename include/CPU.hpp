@@ -129,7 +129,7 @@ public:
 	// Instruction register -- This holds the current op code
 	byte ir;
 
-	// interrupt enable
+	// Interrupt enable register
 	byte ie;
 
 // --- Functions ---

@@ -54,10 +54,10 @@ public:
 
 	struct Flags {
 		// bytes instead of bools so they can all be set with a single number
-		byte Zero : 1;
-		byte Subtract : 1;
-		byte HalfCarry : 1;
-		byte Carry : 1;
+		byte Zero : 1;		// z
+		byte Subtract : 1;	// n
+		byte HalfCarry : 1; // h
+		byte Carry : 1;		// c
 		byte : 4; // unused
 
 		constexpr operator byte() const {

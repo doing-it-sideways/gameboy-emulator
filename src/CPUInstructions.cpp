@@ -67,6 +67,21 @@ struct R8Reg {
 	}
 
 	constexpr R8Reg& operator=(R8Reg& other) { return this->operator=(other.reg); }
+
+	constexpr bool operator==(byte val) { return reg == val; }
+	static friend constexpr bool operator==(R8Reg& a, R8Reg& b) { return a.reg == b.reg; }
+
+	constexpr R8Reg& operator++() { ++reg; return *this; }
+	constexpr byte operator++(int) { return reg++; }
+
+	constexpr R8Reg& operator--() { --reg; return *this; }
+	constexpr byte operator--(int) { return reg--; }
+
+	constexpr byte operator&(byte val) { return reg & val; }
+	constexpr byte operator|(byte val) { return reg | val; }
+	constexpr byte operator^(byte val) { return reg ^ val; }
+	constexpr byte operator<<(byte val) { return reg << val; }
+	constexpr byte operator>>(byte val) { return reg >> val; }
 };
 
 #pragma region value retrieving functions
@@ -251,6 +266,22 @@ INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
 	cpu.MCycle();
 }
 
+INSTR inc_r8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
+
+	R8Reg reg = R8_FromBits(cpu.reg, mem, destVal);
+
+	++reg;
+
+	cpu.reg.f.Zero = (reg == 0) ? 1 : 0;
+	cpu.reg.f.Subtract = 0; // N flag
+	cpu.reg.f.HalfCarry = (reg & 0b00001000) ? 1 : 0;
+
+	cpu.MCycle();
+}
+
 INSTR jp_imm16(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
@@ -301,6 +332,7 @@ static constexpr auto variableInstrMap = std::to_array<VariableInstrData>(
 	INSTRDATA(ld_acc_r16mem, 0b00'11'0000),
 	INSTRDATA(ld_r16mem_acc, 0b00'11'0000),
 	INSTRDATA(ld_r16_imm16, 0b00'11'0000),
+	INSTRDATA(inc_r8, 0b00'11'0000)
 });
 
 // A mapping of all the cb instructions that have many possible op codes.

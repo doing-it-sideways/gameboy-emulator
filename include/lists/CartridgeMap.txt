@@ -1,7 +1,7 @@
 { 0x00, "ROM ONLY" },
 { 0x01, "MBC1" },
 { 0x02, "MBC1+RAM" },
-{ 0x03, "MBC1+RAM_BATTERY" },
+{ 0x03, "MBC1+RAM+BATTERY" },
 { 0x05, "MBC2" },
 { 0x06, "MBC2+BATTERY" },
 { 0x08, "ROM+RAM" }, // no licensed cartridge uses this. behavior unknown

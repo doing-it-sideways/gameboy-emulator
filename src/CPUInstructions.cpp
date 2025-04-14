@@ -231,7 +231,12 @@ INSTR ld_acc_r16mem(Context& cpu, Memory& mem) {
 }
 
 INSTR ld_r16mem_acc(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
+	Addr16MemGetter handle = R16Mem_GetFromBits(destVal);
+
+	mem[(cpu.reg.*handle)()] = cpu.reg.a;
 }
 
 INSTR ld_r16_imm16(Context& cpu, Memory& mem) {

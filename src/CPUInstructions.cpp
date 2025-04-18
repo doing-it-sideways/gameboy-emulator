@@ -1,4 +1,4 @@
-#include <eternal.hpp>
+#include <mapbox/eternal.hpp>
 #include <array>
 
 #ifdef DEBUG
@@ -16,34 +16,6 @@ using Addr16MemGetter = u16(Context::RegisterFile::*)();
 using Addr16Setter = void(Context::RegisterFile::*)(u16);
 
 #define INSTR static void
-
-#ifdef DEBUG
-constexpr static std::string_view GetFunctionName(const std::source_location& loc) {
-	std::string_view name = loc.function_name();
-	std::size_t start = name.find("gb::cpu::");
-	std::size_t end = name.find('(');
-
-	return name.substr(name.find("gb::cpu::") + 9, end - start - 9);
-}
-
-[[noreturn]]
-constexpr static void NoImpl(std::source_location loc = std::source_location::current()) {
-	std::string_view name = GetFunctionName(loc);
-	debug::cexpr::println(stderr, "Unimplemented op code handler: {}", name);
-	debug::cexpr::exit(EXIT_FAILURE);
-}
-
-constexpr static void PrintFuncName(std::source_location loc = std::source_location::current()) {
-	std::string_view name = GetFunctionName(loc);
-	debug::cexpr::println("Function: {}", name);
-}
-
-#define NOIMPL() NoImpl()
-#define PRINTFUNC() PrintFuncName()
-#else // DEBUG
-#define NOIMPL() (void)0
-#define PRINTFUNC() (void)0
-#endif // DEBUG
 
 // Wrapper struct so that indirect hl access gets handled properly for 8-bit registers
 struct R8Reg {
@@ -66,23 +38,56 @@ struct R8Reg {
 		return *this;
 	}
 
+	// postfix operators not supported
+	constexpr R8Reg& operator++() { return operator=(reg + 1); }
+	constexpr R8Reg& operator--() { return operator=(reg - 1); }
+
 	constexpr R8Reg& operator=(R8Reg& other) { return this->operator=(other.reg); }
 
 	constexpr bool operator==(byte val) { return reg == val; }
-	static friend constexpr bool operator==(R8Reg& a, R8Reg& b) { return a.reg == b.reg; }
-
-	constexpr R8Reg& operator++() { ++reg; return *this; }
-	constexpr byte operator++(int) { return reg++; }
-
-	constexpr R8Reg& operator--() { --reg; return *this; }
-	constexpr byte operator--(int) { return reg--; }
 
 	constexpr byte operator&(byte val) { return reg & val; }
 	constexpr byte operator|(byte val) { return reg | val; }
 	constexpr byte operator^(byte val) { return reg ^ val; }
 	constexpr byte operator<<(byte val) { return reg << val; }
 	constexpr byte operator>>(byte val) { return reg >> val; }
+
+	static friend constexpr bool operator==(R8Reg& a, R8Reg& b) { return a.reg == b.reg; }
+
+	static friend constexpr byte operator&(byte a, R8Reg& b) { return a & b.reg; }
+	static friend constexpr byte operator|(byte a, R8Reg& b) { return a | b.reg; }
+	static friend constexpr byte operator^(byte a, R8Reg& b) { return a ^ b.reg; }
+	static friend constexpr byte operator<<(byte a, R8Reg& b) { return a >> b.reg; }
+	static friend constexpr byte operator>>(byte a, R8Reg& b) { return a << b.reg; }
 };
+
+#ifdef DEBUG
+constexpr static std::string_view GetFunctionName(const std::source_location& loc) {
+	std::string_view name = loc.function_name();
+	std::size_t start = name.find("gb::cpu::");
+	std::size_t end = name.find('(');
+
+	return name.substr(name.find("gb::cpu::") + 9, end - start - 9);
+}
+
+[[noreturn]]
+constexpr static void NoImpl(std::source_location loc = std::source_location::current()) {
+	std::string_view name = GetFunctionName(loc);
+	debug::cexpr::forceprinterr("Unimplemented op code handler: {}\n", name);
+	debug::cexpr::exit(EXIT_FAILURE);
+}
+
+constexpr static void PrintFuncName(std::source_location loc = std::source_location::current()) {
+	std::string_view name = GetFunctionName(loc);
+	debug::cexpr::println("Function: {}", name);
+}
+
+#define NOIMPL() NoImpl()
+#define PRINTFUNC() PrintFuncName()
+#else // DEBUG
+#define NOIMPL() (void)0
+#define PRINTFUNC() (void)0
+#endif // DEBUG
 
 #pragma region value retrieving functions
 // Transform value (0-7) into an 8-bit register for use.
@@ -194,6 +199,20 @@ static u16 Read2(Context& cpu, Memory& mem) {
 	return hi << 8 | lo;
 }
 
+// Transforms a value (0-3) into a check for a certain value in the flags.
+static bool FlagCond(Context::Flags flags, byte val) {
+	switch (val) {
+	case 0: return !static_cast<bool>(flags.Zero);	// NZ
+	case 1: return static_cast<bool>(flags.Zero);	// Z
+	case 2: return !static_cast<bool>(flags.Carry);	// NC
+	case 3: return static_cast<bool>(flags.Carry);	// C
+	default: break;
+	}
+
+	debug::cexpr::println(stderr, "Unknown condition check: {:#04b}", val);
+	return false;
+}
+
 #pragma endregion
 
 #pragma region non-prefixed instructions
@@ -202,6 +221,7 @@ INSTR nop(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 }
 
+#pragma region 8-bit loads
 INSTR ld_r8_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 	/*
@@ -253,7 +273,9 @@ INSTR ld_r16mem_acc(Context& cpu, Memory& mem) {
 
 	mem[(cpu.reg.*handle)()] = cpu.reg.a;
 }
+#pragma endregion
 
+#pragma region 16-bit loads
 INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
@@ -265,23 +287,57 @@ INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
 	(cpu.reg.*handle)(data);
 	cpu.MCycle();
 }
+#pragma endregion
 
+#pragma region 8-bit arithmetic/logical instrucitons
 INSTR inc_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
-
+	byte destVal = (cpu.ir & 0b00'111'000) >> 3;
 	R8Reg reg = R8_FromBits(cpu.reg, mem, destVal);
 
 	++reg;
 
-	cpu.reg.f.Zero = (reg == 0) ? 1 : 0;
-	cpu.reg.f.Subtract = 0; // N flag
-	cpu.reg.f.HalfCarry = (reg & 0b00001000) ? 1 : 0;
+	auto& flags = cpu.reg.f;
+	flags.Zero = (reg == 0) ? 1 : 0;
+	flags.Subtract = 0;
+	flags.HalfCarry = (reg & 0b00001000) ? 1 : 0;
 
 	cpu.MCycle();
 }
 
+INSTR dec_r8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	byte destVal = (cpu.ir & 0b00'111'000) >> 3;
+	R8Reg reg = R8_FromBits(cpu.reg, mem, destVal);
+
+	--reg;
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = (reg == 0) ? 1 : 0;
+	flags.Subtract = 1;
+	flags.HalfCarry = (reg & 0b00001000) ? 1 : 0;
+
+	cpu.MCycle();
+}
+
+INSTR xor_r8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	byte destVal = cpu.ir & 0b00000'111;
+	R8Reg reg = R8_FromBits(cpu.reg, mem, destVal);
+
+	cpu.reg.a = cpu.reg.a ^ reg;
+
+	if (cpu.reg.a == 0)
+		cpu.reg.f = 1 << 7; // Z000
+	else
+		cpu.reg.f = 0;		// 0000
+}
+#pragma endregion
+
+#pragma region control flow instructions
 INSTR jp_imm16(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
@@ -290,6 +346,36 @@ INSTR jp_imm16(Context& cpu, Memory& mem) {
 	cpu.reg.pc = addr;
 	cpu.MCycle();
 }
+
+INSTR jr_cond_imm8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	sbyte relativeAddr = Read(cpu, mem);
+	byte condVal = (cpu.ir & 0b000'11'000) >> 3;
+
+	if (FlagCond(cpu.reg.f, condVal)) {
+		cpu.reg.pc += relativeAddr;
+		cpu.MCycle();
+	}
+
+	cpu.MCycle();
+}
+#pragma endregion
+
+#pragma region interrupt / halt related
+INSTR stop(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR di(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ei(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+#pragma endregion
+
 #pragma endregion
 
 #pragma region prefixed (cb) instructions
@@ -319,7 +405,8 @@ static constexpr auto constInstrMap = mapbox::eternal::map<OpCode, Context::Inst
 {
 	INSTRMAP(nop),
 	INSTRMAP(jp_imm16),
-	INSTRMAP(cb_prefix)
+	INSTRMAP(cb_prefix),
+	INSTRMAP(di),
 });
 
 // A mapping of all the instructions that have many possible op codes
@@ -332,7 +419,10 @@ static constexpr auto variableInstrMap = std::to_array<VariableInstrData>(
 	INSTRDATA(ld_acc_r16mem, 0b00'11'0000),
 	INSTRDATA(ld_r16mem_acc, 0b00'11'0000),
 	INSTRDATA(ld_r16_imm16, 0b00'11'0000),
-	INSTRDATA(inc_r8, 0b00'11'0000)
+	INSTRDATA(inc_r8, 0b00'111'000),
+	INSTRDATA(dec_r8, 0b00'111'000),
+	INSTRDATA(xor_r8, 0b00000'111),
+	INSTRDATA(jr_cond_imm8, 0b000'11'000),
 });
 
 // A mapping of all the cb instructions that have many possible op codes.
@@ -395,8 +485,8 @@ bool Context::Fetch() {
 
 	// Couldn't find a valid instruction, something went wrong.
 	if (it == variableInstrMap.end()) {
-		debug::cexpr::print(stderr, "Couldn't find instruction! ");
-		debug::cexpr::println(stderr, "Op Code (ir): {:#010b} ({:#04x})", ir, ir);
+		debug::cexpr::forceprinterr("Couldn't find instruction! ");
+		debug::cexpr::forceprinterr("Op Code (ir): {:#010b} ({:#04x})\n", ir, ir);
 
 		_handler = nullptr;
 		return false;

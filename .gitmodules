@@ -1,0 +1,3 @@
+[submodule "external/eternal"]
+	path = external/eternal
+	url = https://github.com/mapbox/eternal.git

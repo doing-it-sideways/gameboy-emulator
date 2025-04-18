@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
 	using namespace gb;
 
 #if defined(DEBUG) && defined(TESTS)
-	auto simulatedArgs = std::to_array<const char*>({ "", "21" });
+	auto simulatedArgs = std::to_array<const char*>({ "", "19", "step" });
 	return TestMain(simulatedArgs.size(), const_cast<char**>(simulatedArgs.data()));
 #endif // DEBUG
 }
@@ -38,8 +38,11 @@ static std::vector<std::filesystem::path> testRoms{};
 static int TestMain(int argc, char** argv) {
 	// add all test roms from directories into test rom list
 	for (auto& file : std::filesystem::recursive_directory_iterator{ testPath }) {
-		if (file.is_regular_file() && file.path().extension() == ".gb")
+		if (file.is_regular_file() &&
+			(file.path().extension() == ".gb" || file.path().extension() == ".gbc"))
+		{
 			testRoms.push_back(file.path());
+		}
 	}
 
 	if (argc < 2) {
@@ -129,7 +132,7 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 	cpu::Context ctx(std::move(data.value()));
 
 	if (step) {
-		std::println("\n-----Press any Key to Execute the next instruction-----\n");
+		std::println("\n-----Press Enter to execute the next instruction-----\n");
 		ctx.Start();
 
 		while (std::cin.get()) {

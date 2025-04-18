@@ -218,24 +218,24 @@ enum class OpCode : byte {
 	push_r16stk =		0b11'00'0101,	// push to stack
 	pop_r16stk =		0b11'00'0001,	// pop from stack
 
-	// 8-bit arithmetic/logical
-	add_r8 =			0b100000'00,	// acc += register
+	// 8-bit arithmetic/logical instructions
+	add_r8 =			0b10000'000,	// acc += register
 	add_imm8 =			0b11000110,		// acc += n
-	adc_r8 =			0b100010'00,	// acc += register + carry
+	adc_r8 =			0b10001'000,	// acc += register + carry
 	adc_imm8 =			0b11001110,		// acc += n + carry
-	sub_r8 =			0b100100'00,	// acc -= register
+	sub_r8 =			0b10010'000,	// acc -= register
 	sub_imm8 =			0b11010110,		// acc -= n
-	sbc_r8 =			0b100110'00,	// acc = acc - register - carry
+	sbc_r8 =			0b10011'000,	// acc = acc - register - carry
 	sbc_imm8 =			0b11011110,		// acc = acc - n - carry
-	cp_r8 =				0b101110'00,	// set flags for comparison between acc and register
+	cp_r8 =				0b10111'000,	// set flags for comparison between acc and register
 	cp_imm8 =			0b11111110,		// set flags for comparison between acc and n
-	inc_r8 =			0b00'00'0100,	// ++register
-	dec_r8 =			0b00'00'0101,	// --register
-	and_r8 =			0b101000'00,	// acc &= reg
+	inc_r8 =			0b00'000'100,	// ++register
+	dec_r8 =			0b00'000'101,	// --register
+	and_r8 =			0b10100'000,	// acc &= reg
 	and_imm8 =			0b11100110,		// acc &= n
-	or_r8 =				0b101100'00,	// acc |= reg
+	or_r8 =				0b10110'000,	// acc |= reg
 	or_imm8 =			0b11110110,		// acc |= n
-	xor_r8 =			0b101010'00,	// acc ^= reg
+	xor_r8 =			0b10101'000,	// acc ^= reg
 	xor_imm8 =			0b11101110,		// acc ^= n
 	ccf =				0b00111111,		// complement carry flag
 	scf =				0b00110111,		// set carry flag

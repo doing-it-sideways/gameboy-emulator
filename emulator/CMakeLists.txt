@@ -4,6 +4,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 set(CMAKE_CXX_EXTENSIONS false)
 
+add_subdirectory(graphics)
+
 add_library(${EMU_LIB} STATIC "src/ROM.cpp" "src/CPU.cpp" "src/Memory.cpp" "src/CPUInstructions.cpp" "src/MemoryBank.cpp" "src/MapperChipInfo.cpp")
 
 target_compile_definitions(${EMU_LIB}
@@ -17,6 +19,8 @@ target_include_directories(${EMU_LIB}
     PUBLIC include
     PRIVATE ../external/eternal/include
 )
+
+target_link_libraries(${EMU_LIB} PRIVATE graphicslib)
 
 if (MSVC)
     target_compile_options(${EMU_LIB} PUBLIC /Zi)

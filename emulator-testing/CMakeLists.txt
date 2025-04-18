@@ -6,14 +6,8 @@ set(CMAKE_CXX_EXTENSIONS false)
 
 add_executable(${TEST_PROGRAM} main.cpp)
 
-target_include_directories(${TEST_PROGRAM} PUBLIC
-    ${PROJECT_SOURCE_DIR}/emulator/include
-    ${PROJECT_SOURCE_DIR}/graphics/include
-)
-
 target_link_libraries(${TEST_PROGRAM}
 	PRIVATE gbemu
-	PRIVATE graphicslib
 )
 
 if (MSVC)

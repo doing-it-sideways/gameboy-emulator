@@ -11,6 +11,5 @@ option(ENABLE_TESTS "Enable gameboy emulator tests" ON)
 set(WITH_TESTS OFF CACHE BOOL "broken option thanks :thumbs_up:" FORCE)
 add_subdirectory(external/eternal)
 
-add_subdirectory(graphics)
 add_subdirectory(emulator)
 add_subdirectory(emulator-testing)

@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED true)
 set(CMAKE_CXX_EXTENSIONS false)
 
 option(ENABLE_TESTS "Enable gameboy emulator tests" ON)
+option(ENABLE_GLM_AVX2 "Enable the use of AVX2 SIMD implementations for glm." OFF)
 
 set(WITH_TESTS OFF CACHE BOOL "broken option thanks :thumbs_up:" FORCE)
 add_subdirectory(external/eternal)

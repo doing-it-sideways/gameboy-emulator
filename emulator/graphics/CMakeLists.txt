@@ -35,13 +35,22 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(glad glfw)
+DeclareGitLibrary(glm https://github.com/g-truc/glm.git bf71a834948186f4097caa076cd2663c69a10e1e)
+set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
+set(GLM_ENABLE_CXX_20 ON CACHE BOOL "" FORCE)
+
+if (ENABLE_GLM_AVX2)
+    set(GLM_ENABLE_SIMD_AVX2 ON CACHE BOOL "" FORCE)
+endif(ENABLE_GLM_AVX2)
+unset(ENABLE_GLM_AVX2 CACHE)
+
+FetchContent_MakeAvailable(glad glfw glm)
 
 glad_add_library(glad STATIC API gl:core=4.6)
 
 add_subdirectory(src/imgui)
 
-add_library(${GRAPHICS_LIB} STATIC ${IMGUISRC})
+add_library(${GRAPHICS_LIB} STATIC ${IMGUISRC} "src/Error.cpp" "src/ShaderParser.cpp" "src/Shader.cpp" "src/Texture.cpp" "src/GLBuffers.cpp")
 
 target_include_directories(${GRAPHICS_LIB} PUBLIC ${GG_LOCATION} include include/imgui)
 
@@ -49,4 +58,5 @@ target_link_libraries(${GRAPHICS_LIB} PRIVATE
   ${OPENGL_LIBRARIES}
   glad
   glfw
+  glm::glm
 )

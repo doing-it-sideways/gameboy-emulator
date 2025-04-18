@@ -37,7 +37,7 @@ bool Context::Update() {
 		// TODO: handle halt and resumtion to normal execution
 	}
 	else {
-#ifdef DEBUG
+#if defined(DEBUG) && defined(TESTS)
 		Dump(); // print current state of cpu
 #endif
 

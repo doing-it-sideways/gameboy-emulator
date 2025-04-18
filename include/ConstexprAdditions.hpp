@@ -11,15 +11,9 @@
 */
 
 #define NOP (void)0
-
-//#define CExprAssert(x) { \
-//	if (std::is_constant_evaluated()) assert(x); \
-//	else (void)0; \
-//}
+//#define NOPRINT
 
 namespace debug::cexpr {
-
-constexpr void nop() noexcept { (void)0; }
 
 constexpr void exit(int exit_code) {
 	if (std::is_constant_evaluated())
@@ -32,32 +26,53 @@ template <class... Args>
 constexpr void print(std::format_string<Args...> fmt, Args&&... args) {
 	if (std::is_constant_evaluated())
 		NOP;
+
+#ifndef NOPRINT
 	else
 		std::print(fmt, std::forward<Args>(args)...);
+#endif
 }
 
 template <class... Args>
 constexpr void print(std::FILE* stream, std::format_string<Args...> fmt, Args&&... args) {
 	if (std::is_constant_evaluated())
 		NOP;
+
+#ifndef NOPRINT
 	else
 		std::print(stream, fmt, std::forward<Args>(args)...);
+#endif
 }
 
 template <class... Args>
 constexpr void println(std::format_string<Args...> fmt, Args&&... args) {
 	if (std::is_constant_evaluated())
 		NOP;
+
+#ifndef NOPRINT
 	else
 		std::println(fmt, std::forward<Args>(args)...);
+#endif
 }
 
 template <class... Args>
 constexpr void println(std::FILE* stream, std::format_string<Args...> fmt, Args&&... args) {
 	if (std::is_constant_evaluated())
 		NOP;
+
+#ifndef NOPRINT
 	else
 		std::println(stream, fmt, std::forward<Args>(args)...);
+#endif
+}
+
+// ignore disabling printing
+template <class... Args>
+constexpr void forceprinterr(std::format_string<Args...> fmt, Args&&... args) {
+	if (std::is_constant_evaluated())
+		NOP;
+	else
+		std::print(stderr, fmt, std::forward<Args>(args)...);
 }
 
 } // namespace debug::cexpr

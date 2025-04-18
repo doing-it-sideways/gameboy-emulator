@@ -15,7 +15,10 @@ using u16 = std::uint16_t;
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
 
+using s8 = std::int8_t;
+
 using byte = u8;
+using sbyte = s8;
 
 static constexpr u16 interruptEnd = 0x0100;	// restarts and interrupts [$0000, $0FFF]
 static constexpr u16 headerEnd = 0x0150;	// cartridge header [$0100, $014F]

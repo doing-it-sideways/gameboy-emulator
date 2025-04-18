@@ -1,5 +1,5 @@
 #include <array>
-#include <eternal.hpp>
+#include <mapbox/eternal.hpp>
 #include <fstream>
 #include <print>
 #include <ranges>

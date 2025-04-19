@@ -11,6 +11,37 @@
 
 namespace gb::cpu {
 
+#pragma region debug functions
+#ifdef DEBUG
+constexpr static std::string_view GetFunctionName(const std::source_location& loc) {
+	const std::string_view name = loc.function_name();
+	const std::size_t start = name.find("gb::cpu::");
+	const std::size_t end = name.find('(');
+
+	return name.substr(name.find("gb::cpu::") + 9, end - start - 9);
+}
+
+[[noreturn]]
+constexpr static void NoImpl(std::source_location loc = std::source_location::current()) {
+	const std::string_view name = GetFunctionName(loc);
+	debug::cexpr::forceprinterr("Unimplemented op code handler: {}\n", name);
+	debug::cexpr::exit(EXIT_FAILURE);
+}
+
+constexpr static void PrintFuncName(std::source_location loc = std::source_location::current()) {
+	const std::string_view name = GetFunctionName(loc);
+	debug::cexpr::println("Function: {}", name);
+}
+
+#define NOIMPL() NoImpl()
+#define PRINTFUNC() PrintFuncName()
+#else // DEBUG
+#define NOIMPL() (void)0
+#define PRINTFUNC() (void)0
+#endif // DEBUG
+
+#pragma endregion debug functions
+
 using Addr16Getter = u16(Context::RegisterFile::*)() const;
 using Addr16MemGetter = u16(Context::RegisterFile::*)();
 using Addr16Setter = void(Context::RegisterFile::*)(u16);
@@ -61,36 +92,8 @@ struct R8Reg {
 	static friend constexpr byte operator>>(byte a, R8Reg& b) { return a << b.reg; }
 };
 
-#ifdef DEBUG
-constexpr static std::string_view GetFunctionName(const std::source_location& loc) {
-	std::string_view name = loc.function_name();
-	std::size_t start = name.find("gb::cpu::");
-	std::size_t end = name.find('(');
-
-	return name.substr(name.find("gb::cpu::") + 9, end - start - 9);
-}
-
-[[noreturn]]
-constexpr static void NoImpl(std::source_location loc = std::source_location::current()) {
-	std::string_view name = GetFunctionName(loc);
-	debug::cexpr::forceprinterr("Unimplemented op code handler: {}\n", name);
-	debug::cexpr::exit(EXIT_FAILURE);
-}
-
-constexpr static void PrintFuncName(std::source_location loc = std::source_location::current()) {
-	std::string_view name = GetFunctionName(loc);
-	debug::cexpr::println("Function: {}", name);
-}
-
-#define NOIMPL() NoImpl()
-#define PRINTFUNC() PrintFuncName()
-#else // DEBUG
-#define NOIMPL() (void)0
-#define PRINTFUNC() (void)0
-#endif // DEBUG
-
 #pragma region value retrieving functions
-// Transform value (0-7) into an 8-bit register for use.
+// Transform value [0, 7] into an 8-bit register for use.
 static R8Reg R8_FromBits(Context::RegisterFile& regs, Memory& mem, byte val) {
 	assert(val < 8);
 
@@ -110,7 +113,7 @@ static R8Reg R8_FromBits(Context::RegisterFile& regs, Memory& mem, byte val) {
 	}
 }
 
-// Transform value (0-3) into a function pointer to a 16-bit register setter for use.
+// Transform value [0, 3] into a function pointer to a 16-bit register setter for use.
 constexpr static Addr16Setter R16_SetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
@@ -124,7 +127,7 @@ constexpr static Addr16Setter R16_SetFromBits(byte val) {
 	}
 }
 
-// Transforms a value (0-3) into a function pointer to a 16-bit register getter
+// Transforms a value [0, 3] into a function pointer to a 16-bit register getter
 constexpr static Addr16Getter R16_GetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
@@ -138,7 +141,7 @@ constexpr static Addr16Getter R16_GetFromBits(byte val) {
 	}
 }
 
-// Transforms a value (0-3) into a function pointer to a 16-bit register getter (memory).
+// Transforms a value [0, 3] into a function pointer to a 16-bit register getter (memory).
 constexpr static Addr16Setter R16Mem_SetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
@@ -152,7 +155,7 @@ constexpr static Addr16Setter R16Mem_SetFromBits(byte val) {
 	}
 }
 
-// Transforms a value (0-3) into a function pointer to a 16-bit register getter (memory).
+// Transforms a value [0, 3] into a function pointer to a 16-bit register getter (memory).
 constexpr static Addr16MemGetter R16Mem_GetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
@@ -166,7 +169,7 @@ constexpr static Addr16MemGetter R16Mem_GetFromBits(byte val) {
 	}
 }
 
-// Transforms a value (0-3) into a function pointer to a 16-bit register getter (stack).
+// Transforms a value [0, 3] into a function pointer to a 16-bit register getter (stack).
 constexpr static Addr16Getter R16Stk_GetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
@@ -178,6 +181,22 @@ constexpr static Addr16Getter R16Stk_GetFromBits(byte val) {
 	case 3: return &rf::af;
 	default: std::unreachable();
 	}
+}
+
+// Transforms a value [0, 3] into a check for a certain value in the flags.
+static bool FlagCond(Context::Flags flags, byte val) {
+	assert(val < 4);
+
+	switch (val) {
+	case 0: return !static_cast<bool>(flags.Zero);	// NZ
+	case 1: return static_cast<bool>(flags.Zero);	// Z
+	case 2: return !static_cast<bool>(flags.Carry);	// NC
+	case 3: return static_cast<bool>(flags.Carry);	// C
+	default: break;
+	}
+
+	debug::cexpr::println(stderr, "Unknown condition check: {:#04b}", val);
+	return false;
 }
 
 // Reads one byte from the memory, increments the program counter
@@ -199,21 +218,11 @@ static u16 Read2(Context& cpu, Memory& mem) {
 	return hi << 8 | lo;
 }
 
-// Transforms a value (0-3) into a check for a certain value in the flags.
-static bool FlagCond(Context::Flags flags, byte val) {
-	switch (val) {
-	case 0: return !static_cast<bool>(flags.Zero);	// NZ
-	case 1: return static_cast<bool>(flags.Zero);	// Z
-	case 2: return !static_cast<bool>(flags.Carry);	// NC
-	case 3: return static_cast<bool>(flags.Carry);	// C
-	default: break;
-	}
+#pragma endregion value retrieving functions
 
-	debug::cexpr::println(stderr, "Unknown condition check: {:#04b}", val);
-	return false;
-}
-
-#pragma endregion
+// Forward declared because it handles calling all cb prefixed instrs.
+// Needed for putting it in the instruction map.
+INSTR cb_prefix(Context& cpu, Memory&);
 
 #pragma region non-prefixed instructions
 INSTR nop(Context& cpu, Memory& mem) {
@@ -273,7 +282,31 @@ INSTR ld_r16mem_acc(Context& cpu, Memory& mem) {
 
 	mem[(cpu.reg.*handle)()] = cpu.reg.a;
 }
-#pragma endregion
+
+INSTR ld_acc_imm16(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ld_imm16_acc(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ldh_acc_ffc(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ldh_ffc_acc(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ldh_acc_ffimm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ldh_ffimm8_acc(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+#pragma endregion 8-bit loads
 
 #pragma region 16-bit loads
 INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
@@ -287,9 +320,69 @@ INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
 	(cpu.reg.*handle)(data);
 	cpu.MCycle();
 }
-#pragma endregion
+
+INSTR ld_imm16_sp(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ld_sp_hl(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ld_hl_spimm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR push_r16stk(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR pop_r16stk(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+#pragma endregion 16-bit loads
 
 #pragma region 8-bit arithmetic/logical instrucitons
+INSTR add_r8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR add_imm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR adc_r8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR adc_imm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR sub_r8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR sub_imm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR sbc_r8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR sbc_imm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR cp_r8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR cp_imm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
 INSTR inc_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
@@ -322,6 +415,22 @@ INSTR dec_r8(Context& cpu, Memory& mem) {
 	cpu.MCycle();
 }
 
+INSTR and_r8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR and_imm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR or_r8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR or_imm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
 INSTR xor_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
@@ -335,7 +444,63 @@ INSTR xor_r8(Context& cpu, Memory& mem) {
 	else
 		cpu.reg.f = 0;		// 0000
 }
-#pragma endregion
+
+INSTR xor_imm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ccf(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR scf(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR daa(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR cpl(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+#pragma endregion 8-bit arithmetic/logical instrucitons
+
+#pragma region 16-bit arithmetic
+INSTR inc_r16(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR dec_r16(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR add_hl_r16(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR add_sp_imm8(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+#pragma endregion 16-bit arithmetic
+
+#pragma region rotate, shift, bit manipulation
+INSTR rlca(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR rrca(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR rla(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR rra(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+#pragma endregion rotate, shift, bit manipulation
 
 #pragma region control flow instructions
 INSTR jp_imm16(Context& cpu, Memory& mem) {
@@ -345,6 +510,18 @@ INSTR jp_imm16(Context& cpu, Memory& mem) {
 
 	cpu.reg.pc = addr;
 	cpu.MCycle();
+}
+
+INSTR jp_hl(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR jp_cond_imm16(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR jr_imm8(Context& cpu, Memory& mem) {
+	NOIMPL();
 }
 
 INSTR jr_cond_imm8(Context& cpu, Memory& mem) {
@@ -360,10 +537,38 @@ INSTR jr_cond_imm8(Context& cpu, Memory& mem) {
 
 	cpu.MCycle();
 }
-#pragma endregion
+
+INSTR call_imm16(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR call_cond_imm16(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ret(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR ret_cond(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR reti(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR rst_tgt3(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+#pragma endregion control flow instructions
 
 #pragma region interrupt / halt related
 INSTR stop(Context& cpu, Memory& mem) {
+	NOIMPL();
+}
+
+INSTR halt(Context& cpu, Memory& mem) {
 	NOIMPL();
 }
 
@@ -374,15 +579,59 @@ INSTR di(Context& cpu, Memory& mem) {
 INSTR ei(Context& cpu, Memory& mem) {
 	NOIMPL();
 }
-#pragma endregion
+#pragma endregion interrupt / halt related
 
-#pragma endregion
+#pragma endregion non-prefixed instructions
 
 #pragma region prefixed (cb) instructions
+INSTR cb_rlc_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+INSTR cb_rrc_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+INSTR cb_rl_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+INSTR cb_rr_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+INSTR cb_sla_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+INSTR cb_sra_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+INSTR cb_swap_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+INSTR cb_srl_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+INSTR cb_bit_b3_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+INSTR cb_res_b3_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+INSTR cb_set_b3_r8(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
 INSTR cb_prefix(Context& cpu, Memory&) {
 	NOIMPL();
 }
-#pragma endregion
+#pragma endregion prefixed (cb) instructions
 
 #undef INSTR
 
@@ -404,9 +653,44 @@ struct VariableInstrData {
 static constexpr auto constInstrMap = mapbox::eternal::map<OpCode, Context::InstrFunc>(
 {
 	INSTRMAP(nop),
-	INSTRMAP(jp_imm16),
+	INSTRMAP(ld_acc_imm16),
+	INSTRMAP(ld_imm16_acc),
+	INSTRMAP(ldh_acc_ffc),
+	INSTRMAP(ldh_ffc_acc),
+	INSTRMAP(ldh_acc_ffimm8),
+	INSTRMAP(ldh_ffimm8_acc),
+	INSTRMAP(ld_imm16_sp),
+	INSTRMAP(ld_sp_hl),
+	INSTRMAP(ld_hl_spimm8),
+	INSTRMAP(add_imm8),
+	INSTRMAP(adc_imm8),
+	INSTRMAP(sub_imm8),
+	INSTRMAP(sbc_imm8),
+	INSTRMAP(cp_imm8),
+	INSTRMAP(and_imm8),
+	INSTRMAP(or_imm8),
+	INSTRMAP(xor_imm8),
+	INSTRMAP(ccf),
+	INSTRMAP(scf),
+	INSTRMAP(daa),
+	INSTRMAP(cpl),
+	INSTRMAP(add_sp_imm8),
+	INSTRMAP(rlca),
+	INSTRMAP(rrca),
+	INSTRMAP(rrca),
+	INSTRMAP(rla),
+	INSTRMAP(rra),
 	INSTRMAP(cb_prefix),
+	INSTRMAP(jp_imm16),
+	INSTRMAP(jp_hl),
+	INSTRMAP(jr_imm8),
+	INSTRMAP(call_imm16),
+	INSTRMAP(ret),
+	INSTRMAP(reti),
+	INSTRMAP(stop),
+	INSTRMAP(halt),
 	INSTRMAP(di),
+	INSTRMAP(ei),
 });
 
 // A mapping of all the instructions that have many possible op codes
@@ -419,21 +703,49 @@ static constexpr auto variableInstrMap = std::to_array<VariableInstrData>(
 	INSTRDATA(ld_acc_r16mem, 0b00'11'0000),
 	INSTRDATA(ld_r16mem_acc, 0b00'11'0000),
 	INSTRDATA(ld_r16_imm16, 0b00'11'0000),
+	INSTRDATA(push_r16stk, 0b00'11'0000),
+	INSTRDATA(pop_r16stk, 0b00'11'0000),
+	INSTRDATA(add_r8, 0b00000'111),
+	INSTRDATA(adc_r8, 0b00000'111),
+	INSTRDATA(sub_r8, 0b00000'111),
+	INSTRDATA(sbc_r8, 0b00000'111),
+	INSTRDATA(cp_r8, 0b00000'111),
 	INSTRDATA(inc_r8, 0b00'111'000),
 	INSTRDATA(dec_r8, 0b00'111'000),
+	INSTRDATA(and_r8, 0b00000'111),
+	INSTRDATA(or_r8, 0b00000'111),
 	INSTRDATA(xor_r8, 0b00000'111),
+	INSTRDATA(inc_r16, 0b00'11'0000),
+	INSTRDATA(dec_r16, 0b00'11'0000),
+	INSTRDATA(add_hl_r16, 0b00'11'0000),
+	INSTRDATA(jp_cond_imm16, 0b000'11'000),
 	INSTRDATA(jr_cond_imm8, 0b000'11'000),
+	INSTRDATA(call_cond_imm16, 0b000'11'000),
+	INSTRDATA(ret_cond, 0b000'11'000),
+	INSTRDATA(rst_tgt3, 0b00'111'000),
 });
 
 // A mapping of all the cb instructions that have many possible op codes.
 // Stored as an array for the same reason as variableInstrMap
-//static constexpr auto cbInstrMap = std::to_array<VariableInstrData>(
-//{
-//
-//});
+static constexpr auto cbInstrMap = std::to_array<VariableInstrData>(
+{
+	INSTRDATA(cb_rlc_r8, 0b00000'111),
+	INSTRDATA(cb_rrc_r8, 0b00000'111),
+	INSTRDATA(cb_rl_r8, 0b00000'111),
+	INSTRDATA(cb_rr_r8, 0b00000'111),
+	INSTRDATA(cb_sla_r8, 0b00000'111),
+	INSTRDATA(cb_sra_r8, 0b00000'111),
+	INSTRDATA(cb_swap_r8, 0b00000'111),
+	INSTRDATA(cb_srl_r8, 0b00000'111),
+	INSTRDATA(cb_bit_b3_r8, 0b00'111'111),
+	INSTRDATA(cb_res_b3_r8, 0b00'111'111),
+	INSTRDATA(cb_set_b3_r8, 0b00'111'111),
+});
 
 #undef INSTRMAP
 
+// A list of unused op codes. If an op code in this list is somehow chosen,
+// the cpu should hang.
 static constexpr auto InvalidInstrs = std::to_array<byte>(
 {
 	0xD3, 0xDB, 0xDD, 0xE3, 0xE4, 0xEB, 0xEC, 0xED, 0xF4, 0xFC, 0xFD

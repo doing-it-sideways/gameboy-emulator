@@ -647,7 +647,6 @@ struct VariableInstrData {
 };
 #define INSTRDATA(op, byte) { &op, OpCode::##op, byte }
 
-
 // A mapping of all the instructions that do not have multiple different possible op codes
 // such as ld_r8_r8, where 6 bits can differ.
 static constexpr auto constInstrMap = mapbox::eternal::map<OpCode, Context::InstrFunc>(

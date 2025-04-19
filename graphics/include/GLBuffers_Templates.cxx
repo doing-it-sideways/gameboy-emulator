@@ -64,34 +64,6 @@ VertexBuffer& VertexBuffer::operator=(const VertexBuffer& other) {
 	return *this;
 }
 
-//template <arithmetic T>
-//VertexBuffer::VertexBuffer(GLuint elements, GLenum drawType)
-//	: _elements(elements)
-//{
-//	glGenBuffers(1, &vbo);
-//	Bind();
-//	glBufferData(GL_ARRAY_BUFFER, elements * sizeof(T), nullptr, drawType);
-//}
-
-//template <arithmetic T, typename Alloc>
-//VertexBuffer::VertexBuffer(const std::vector<std::vector<T, Alloc>, Alloc>& buffers, GLenum drawType)
-//	: VertexBuffer(buffers.size() * buffers[0].size(), drawType)
-//{
-//	GLintptr offset = 0;
-//	for (auto& buf : buffers) {
-//		/*glBufferSubData(GL_ARRAY_BUFFER, offset, buf.size() * sizeof(T), buf.data());
-//		offset += buf.size() * sizeof(T);*/
-//	}
-//}
-
-//template <arithmetic T>
-//void VertexBuffer::SetData(const T* buffer, GLuint bufSize, GLint bufferNum) {
-//	Bind();
-//
-//	GLint offset = _elements / bufSize * bufferNum;
-//	glBufferSubData(GL_ARRAY_BUFFER, offset, bufSize, buffer);
-//}
-
 template <std::integral T>
 IndexBuffer::IndexBuffer(const T* buffer, GLuint bufSize, GLenum drawType)
 	: _count(bufSize)
@@ -148,8 +120,7 @@ static constexpr GLsizeiptr UniformBuffer::Getstd140Size() {
 			return Getstd140Size<T, matT::cols, matT::rows, matT::qual>();
 		}
 
-		return 0;
-		// TODO: Add support for generic classes?
+		return 0; // class types not yet supported
 	}
 	else if constexpr (std::is_array_v<T>)
 		return 16 * ArrLen; // 4N * Size

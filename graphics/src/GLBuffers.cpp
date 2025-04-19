@@ -72,34 +72,6 @@ static constexpr GLuint GLTypeSize(GLenum type) {
 	}
 }
 
-//void VertexBuffer::SetAttributes(const AttributeLayout& layout) const {
-//	Bind();
-//	
-//	/*		positions			tex coords				normals
-//	AddAttribute<float>(3).AddAttribute<float>(2).AddAttribute<float>(3)
-//	_elements == amount of vertices total
-//	//_element[0] ~= 3 * float + 2 * float + 3 * float == 32 bytes per vertex == layout._stride
-//	_element[0] ~= 3 * float + 2 * float == 5 floats (20 bytes) per vertex == layout._stride
-//	
-//	struct Attribute {
-//		type;
-//		count;
-//		normalized;
-//	};
-//
-//	std::vector<Attribute> _attribs{};
-//	GLuint _stride = 0;
-//	
-//	
-//	vertices = _elements / attribsPerVertex
-//	(36) = 180 / 5
-//	*/
-//
-//	/*glBufferSubData(GL_ARRAY_BUFFER, 0, size, data);
-//	glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);
-//	glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);*/
-//}
-
 AttributeLayout::AttributeLayout(GLuint instanceSeparation)
 	: _instanceSeparation(instanceSeparation)
 {}

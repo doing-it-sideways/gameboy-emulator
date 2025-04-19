@@ -15,12 +15,9 @@ class Shader;
 
 namespace cyber {
 
-//struct AttributeLayout;
-
 struct VertexBuffer {
 	GLuint vbo = 0;
 
-	// GL_STATIC_DRAW, GL_STREAM_DRAW, GL_DYNAMIC_DRAW
 	template <std140 T>
 	VertexBuffer(const T* buffer, GLuint bufSize, GLenum drawType = GL_STATIC_DRAW);
 
@@ -34,13 +31,6 @@ struct VertexBuffer {
 		: VertexBuffer(buffer.data(), buffer.size(), drawType)
 	{}
 
-	//// to be used in conjunction with SetData
-	//template <arithmetic T>
-	//VertexBuffer(GLuint elements, GLenum drawType = GL_STATIC_DRAW);
-
-	//template <arithmetic T, typename Alloc = std::allocator<T>>
-	//VertexBuffer(const std::vector<std::vector<T, Alloc>, Alloc>& buffers, GLenum drawType = GL_STATIC_DRAW);
-
 	~VertexBuffer();
 
 	template <std140 T>
@@ -51,21 +41,6 @@ struct VertexBuffer {
 	DEFAULT_MOVE(VertexBuffer, default);
 
 	inline operator GLuint() { return vbo; }
-
-	/*template <arithmetic T>
-	void SetData(const T* buffer, GLuint bufSize, GLint bufferNum);
-	
-	template <arithmetic T, GLuint Size>
-	inline void SetData(const std::array<T, Size>& buffer, GLint bufferNum) {
-		SetData(buffer.data(), Size, bufferNum);
-	}
-	
-	template <arithmetic T, typename Alloc = std::allocator<T>>
-	void SetData(const std::vector<T, Alloc>& buffer, GLint bufferNum) {
-		SetData(buffer.data(), buffer.size(), bufferNum);
-	}
-
-	void SetAttributes(const AttributeLayout& layout) const;*/
 
 	inline void Bind() const { glBindBuffer(GL_ARRAY_BUFFER, vbo); }
 	inline void Unbind() const { glBindBuffer(GL_ARRAY_BUFFER, 0); }
@@ -79,7 +54,6 @@ private:
 struct IndexBuffer {
 	GLuint ebo = 0;
 
-	// GL_STATIC_DRAW, GL_STREAM_DRAW, GL_DYNAMIC_DRAW
 	template <std::integral T>
 	IndexBuffer(const T* buffer, GLuint bufSize, GLenum drawType = GL_STATIC_DRAW);
 
@@ -205,9 +179,6 @@ struct UniformBuffer {
 
 	template <std140 T, glm::length_t C, glm::length_t R, glm::qualifier Q>
 	static constexpr GLsizeiptr Getstd140Size();
-
-	/*template <class Class>
-	UniformBuffer(Class c);*/
 
 	template <std140... UniformVals>
 	static constexpr GLsizeiptr Calcstd140Size();

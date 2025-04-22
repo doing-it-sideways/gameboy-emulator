@@ -18,7 +18,7 @@ constexpr static std::string_view GetFunctionName(const std::source_location& lo
 	const std::size_t start = name.find("gb::cpu::");
 	const std::size_t end = name.find('(');
 
-	return name.substr(name.find("gb::cpu::") + 9, end - start - 9);
+	return name.substr(start + 9, end - start - 9);
 }
 
 [[noreturn]]
@@ -69,11 +69,11 @@ struct R8Reg {
 		return *this;
 	}
 
+	constexpr R8Reg& operator=(R8Reg& other) { return operator=(other.reg); }
+
 	// postfix operators not supported
 	constexpr R8Reg& operator++() { return operator=(reg + 1); }
 	constexpr R8Reg& operator--() { return operator=(reg - 1); }
-
-	constexpr R8Reg& operator=(R8Reg& other) { return this->operator=(other.reg); }
 
 	constexpr bool operator==(byte val) { return reg == val; }
 
@@ -82,8 +82,6 @@ struct R8Reg {
 	constexpr byte operator^(byte val) { return reg ^ val; }
 	constexpr byte operator<<(byte val) { return reg << val; }
 	constexpr byte operator>>(byte val) { return reg >> val; }
-
-	static friend constexpr bool operator==(R8Reg& a, R8Reg& b) { return a.reg == b.reg; }
 
 	static friend constexpr byte operator&(byte a, R8Reg& b) { return a & b.reg; }
 	static friend constexpr byte operator|(byte a, R8Reg& b) { return a | b.reg; }

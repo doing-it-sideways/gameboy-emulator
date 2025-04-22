@@ -54,7 +54,7 @@ add_library(${GRAPHICS_LIB} STATIC ${IMGUISRC} "src/Error.cpp" "src/ShaderParser
 
 target_include_directories(${GRAPHICS_LIB} PUBLIC ${GG_LOCATION} include include/imgui)
 
-target_link_libraries(${GRAPHICS_LIB} PRIVATE
+target_link_libraries(${GRAPHICS_LIB} PUBLIC
   ${OPENGL_LIBRARIES}
   glad
   glfw

@@ -207,10 +207,10 @@ static byte Read(Context& cpu, Memory& mem) {
 // Reads two bytes from memory and returns the data as a 16-bit value.
 // Increments program counter twice and adds two mcycles.
 static u16 Read2(Context& cpu, Memory& mem) {
-	byte lo = mem[cpu.reg.pc++];
+	const byte lo = mem[cpu.reg.pc++];
 	cpu.MCycle();
 
-	u16 hi = mem[cpu.reg.pc++];
+	const u16 hi = mem[cpu.reg.pc++];
 	cpu.MCycle();
 
 	return hi << 8 | lo;
@@ -282,27 +282,51 @@ INSTR ld_r16mem_acc(Context& cpu, Memory& mem) {
 }
 
 INSTR ld_acc_imm16(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	cpu.reg.a = Read2(cpu, mem);
+	cpu.MCycle();
 }
 
 INSTR ld_imm16_acc(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	u16 addr = Read2(cpu, mem);
+	mem[addr] = cpu.reg.a;
+
+	cpu.MCycle();
 }
 
 INSTR ldh_acc_ffc(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	cpu.reg.a = mem[0xFF00 | cpu.reg.c];
+	cpu.MCycle();
 }
 
 INSTR ldh_ffc_acc(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	mem[0xFF00 | cpu.reg.c] = cpu.reg.a;
+	cpu.MCycle();
 }
 
 INSTR ldh_acc_ffimm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte loAddr = Read(cpu, mem);
+	cpu.reg.a = mem[0xFF00 | loAddr];
+
+	cpu.MCycle();
 }
 
 INSTR ldh_ffimm8_acc(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte loAddr = Read(cpu, mem);
+	mem[0xFF00 | loAddr] = cpu.reg.a;
+
+	cpu.MCycle();
 }
 #pragma endregion 8-bit loads
 
@@ -320,11 +344,22 @@ INSTR ld_r16_imm16(Context& cpu, Memory& mem) {
 }
 
 INSTR ld_imm16_sp(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	u16 addr = Read2(cpu, mem);
+
+	mem[addr] = cpu.reg.sp & 0x00FF;
+	cpu.MCycle();
+
+	mem[addr + 1] = (cpu.reg.sp & 0xFF00) >> 8;
+	cpu.MCycle();
 }
 
 INSTR ld_sp_hl(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	cpu.reg.sp = cpu.reg.hl();
+	cpu.MCycle();
 }
 
 INSTR ld_hl_spimm8(Context& cpu, Memory& mem) {

@@ -151,7 +151,7 @@ public:
 	void Inc(u16 reg16);
 	void Dec(u16 reg16);
 
-	constexpr void MCycle(u8 cycles = 1) { _mCycles += cycles; }
+	void MCycle(u8 cycles = 1);
 
 #ifdef DEBUG
 	// Dumps current state of the cpu to console or a file

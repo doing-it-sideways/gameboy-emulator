@@ -90,6 +90,11 @@ void Context::Dec(u16 reg16) {
 #endif // DEBUG
 }
 
+void Context::MCycle(u8 cycles) {
+	// TODO
+	_mCycles += cycles;
+}
+
 void Context::Dump() const {
 	debug::cexpr::println("\n---Current CPU State---");
 	byte data = _memory[reg.pc];

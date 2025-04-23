@@ -52,7 +52,11 @@ add_subdirectory(src/imgui)
 
 add_library(${GRAPHICS_LIB} STATIC ${IMGUISRC} "src/Error.cpp" "src/ShaderParser.cpp" "src/Shader.cpp" "src/Texture.cpp" "src/GLBuffers.cpp")
 
-target_include_directories(${GRAPHICS_LIB} PUBLIC ${GG_LOCATION} include include/imgui)
+target_include_directories(${GRAPHICS_LIB} 
+    PUBLIC ${GG_LOCATION}
+    PUBLIC include
+    PUBLIC include/imgui
+)
 
 target_link_libraries(${GRAPHICS_LIB} PUBLIC
   ${OPENGL_LIBRARIES}

@@ -10,6 +10,7 @@ auto&& MemoryBank::Access(this Self&& self, u8 bank, u16 addr) {
 	else {
 		switch (self._type) {
 		case MemType::ROM: return self.GetRom(bank, addr);
+		// TODO: ROM_MULTICART
 		case MemType::RAM: return self.GetRam(bank, addr);
 		default: std::unreachable();
 		}

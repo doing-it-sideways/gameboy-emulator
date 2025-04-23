@@ -39,10 +39,7 @@ struct IMapperInfo {
 	explicit IMapperInfo(byte ramSizeCode = 0);
 	virtual ~IMapperInfo() {}
 
-	IMapperInfo(const IMapperInfo&) = default;
-	IMapperInfo(IMapperInfo&&) = default;
-	IMapperInfo& operator=(const IMapperInfo&) = default;
-	IMapperInfo& operator=(IMapperInfo&&) = default;
+	constexpr IMapperInfo(IMapperInfo&&) = default;
 
 	// Bank number retrieval method
 	virtual byte Bank(u16 addr) const = 0;

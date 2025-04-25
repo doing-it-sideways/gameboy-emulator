@@ -755,29 +755,87 @@ INSTR cpl(Context& cpu, Memory& mem) {
 
 #pragma region 16-bit arithmetic
 INSTR inc_r16(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
+	Addr16Setter setter = R16_SetFromBits(destVal);
+	Addr16Getter getter = R16_GetFromBits(destVal);
+
+	u16 plus1 = (cpu.reg.*getter)() + 1;
+	(cpu.reg.*setter)(plus1);
 }
 
 INSTR dec_r16(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
+	Addr16Setter setter = R16_SetFromBits(destVal);
+	Addr16Getter getter = R16_GetFromBits(destVal);
+
+	u16 minus1 = (cpu.reg.*getter)() - 1;
+	(cpu.reg.*setter)(minus1);
 }
 
 INSTR add_hl_r16(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
+	Addr16Getter handle = R16_GetFromBits(destVal);
+
+	u16 reg = (cpu.reg.*handle)();
+	cpu.reg.l += reg & 0x00FF;
+
+	auto& flags = cpu.reg.f;
+	flags.Subtract = 0;
+
+	flags.HalfCarry = (cpu.reg.l & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.l & 0b10000000) ? 1 : 0;
+	cpu.MCycle();
+
+	cpu.reg.h += ((reg & 0xFF00) >> 8) + flags.Carry;
+
+	flags.HalfCarry = (cpu.reg.l & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.l & 0b10000000) ? 1 : 0;
 }
 
 INSTR add_sp_imm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	// TODO: not quite mcycle accurate
+	sbyte e = Read(cpu, mem);
+	cpu.reg.sp += e;
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = 0;
+	flags.Subtract = 0;
+	flags.HalfCarry = (cpu.reg.sp & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.sp & 0b10000000) ? 1 : 0;
 }
 #pragma endregion 16-bit arithmetic
 
 #pragma region rotate, shift, bit manipulation
 INSTR rlca(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	cpu.reg.a = std::rotl(cpu.reg.a, 1);
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = 0;
+	flags.Subtract = 0;
+	flags.Subtract = 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR rrca(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	cpu.reg.a = std::rotr(cpu.reg.a, 1);
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = 0;
+	flags.Subtract = 0;
+	flags.Subtract = 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR rla(Context& cpu, Memory& mem) {

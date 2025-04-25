@@ -85,57 +85,116 @@ static std::unique_ptr<IMapperInfo> InitMapperChip(byte type, byte ramSizeCode) 
 	//case 0xFE:
 	//case 0xFF:
 	default:
-		debug::cexpr::println("Unknown mapper chip! Things might break...");
+		debug::cexpr::println("Unknown mapper chip!");
 		return {};
 	}
 }
 
 Memory::Memory(rom::RomData&& data)
-	: _romData(std::move(data))
-	, _mapperChipData(InitMapperChip(_romData[0x0147], _romData[0x0149]))
-	, _ramInternal(0x2000)
+	: _vram()
 	, _hram()
-	, _romBanksCart(_romData, MemType::ROM)
-	, _ramDataCart(_romData, MemType::RAM)
+	, _ieFlag()
+	, _romData(std::move(data))
+	, _ramInternal(0x2000)
+	, _mapperChipData(InitMapperChip(_romData[0x0147], _romData[0x0149]))
 	, _mapperChip(GetMapperChipType(_romData[0x0147]))
 {}
 
 byte& Memory::Read(u16 addr) {
-	if (addr >= 0xA000 && addr < 0xC000) {
-		// TODO: dont return ref to local
-		auto data = _mapperChipData->ReadRam(addr);
-
-		if (data.has_value())
-			return data.value();
+	// [$0000, $7FFF]
+	if (addr < romNEnd) {
+		if (auto romData = _mapperChipData->ReadRom(*this, addr); romData.has_value())
+			return romData.value();
+	}
+	// [$8000, $9FFF]
+	else if (addr < vramEnd) {
+		// TODO
+	}
+	// [$A000, $BFFF]
+	else if (addr < ramCartEnd) {
+		if (auto cartRamData = _mapperChipData->ReadRam(addr); cartRamData.has_value())
+			return cartRamData.value();
+	}
+	// [$C000, $DFFF]
+	else if (addr < ramNEnd) {
+		// TODO?: cgb has switchable banks (1-7)
+		return _ramInternal[addr - 0xC000];
+	}
+	// [$E000, $FDFF]
+	else if (addr < echoRamEnd) {
+		// mapped to wram
+		return _ramInternal[addr - 0xE000];
+	}
+	// [$FE00, $FE9F]
+	else if (addr < oamEnd) {
+		// TODO
+	}
+	// [$FEA0, $FEFF]
+	else if (addr < unusableEnd) {
+		// TODO
+		// https://gbdev.io/pandocs/Memory_Map.html#fea0feff-range
+	}
+	// [$FF00, $FF7F]
+	else if (addr < ioEnd) {
+		// TODO
+	}
+	// [$FF80, $FFFE]
+	else if (addr < hramEnd) {
+		return _hram[addr - 0xFF80];
+	}
+	// $FFFF -- regIE
+	else {
+		return _ieFlag;
 	}
 
-	// attempt to read data from a rom bank. all rom banks are stored on the cartridge
-	// addresses: [0x0000, 0x7FFF]
-	if (auto romData = _mapperChipData->ReadRom(_romBanksCart, addr); romData.has_value())
-		return romData.value();
-
-	// attempt to read ram data from cartridge ram
-	// addresses: [0xA000, 0xBFFF]
-	if (auto ramData = _mapperChipData->ReadRam(addr); ramData.has_value())
-		return ramData.value();
-
-	// TODO: all other memory locations
 	debug::cexpr::println("Unimplemented or invalid memory access at {:#06x}", addr);
 	debug::cexpr::exit(EXIT_FAILURE);
 	std::unreachable();
 }
 
 void Memory::Write(u16 addr, byte val) {
-	// attempt to write data to cartridge ram
-	// addresses: [0xA000, 0xBFFF]
-	if (_mapperChipData->AttemptWriteRam(addr, val))
-		return;
-
-	// attempt to write data to internal ram
-	// addresses: [0xC000, 0xDFFF]
-	if (addr >= ramCartEnd && addr < ramNEnd) {
+	// [$8000, $9FFF]
+	if (addr >= romNEnd && addr < vramEnd) {
+		// TODO
+	}
+	// [$A000, $BFFF]
+	else if (addr < ramCartEnd) {
+		if (_mapperChipData->AttemptWriteRam(addr, val))
+			return;
+	}
+	// [$C000, $DFFF]
+	else if (addr < ramNEnd) {
+		// TODO?: cgb has switchable banks (1-7)
 		_ramInternal[addr - 0xC000] = val;
 		return;
+	}
+	// [$E000, $FDFF]
+	else if (addr < echoRamEnd) {
+		// mapped to wram
+		_ramInternal[addr - 0xE000] = val;
+		return;
+	}
+	// [$FE00, $FE9F]
+	else if (addr < oamEnd) {
+		// TODO
+	}
+	// [$FEA0, $FEFF]
+	else if (addr < unusableEnd) {
+		// TODO
+		// https://gbdev.io/pandocs/Memory_Map.html#fea0feff-range
+	}
+	// [$FF00, $FF7F]
+	else if (addr < ioEnd) {
+		// TODO
+	}
+	// [$FF80, $FFFE]
+	else if (addr < hramEnd) {
+		_hram[addr - 0xFF80] = val;
+		return;
+	}
+	// $FFFF -- interrupt enable register
+	else {
+		_ieFlag = val;
 	}
 	
 	debug::cexpr::println("Unimplemented or invalid memory write at {:#06x}", addr);

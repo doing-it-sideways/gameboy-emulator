@@ -2,8 +2,7 @@
 #include <string_view>
 
 #include "Core.hpp"
-#include "CPU.hpp"
-#include "ROM.hpp"
+#include "Emulator.hpp"
 
 #ifdef DEBUG
 #include <array>
@@ -124,24 +123,20 @@ static inline int RunTest(std::size_t testNum, bool step) {
 
 static int RunTest(const std::filesystem::path& test, bool step) {
 	using namespace gb;
-	auto data = rom::Load(test);
 
-	if (!data.has_value())
-		return -1;
-
-	cpu::Context ctx(std::move(data.value()));
+	Emu emu{ test };
 
 	if (step) {
 		std::println("\n-----Press Enter to execute the next instruction-----\n");
-		ctx.Start();
+		emu.Start();
 
 		while (std::cin.get()) {
-			if (!ctx.Update())
+			if (!emu.Update())
 				break;
 		}
 	}
 	else
-		ctx.Run();
+		emu.Run();
 
 	// TODO
 	return 0;

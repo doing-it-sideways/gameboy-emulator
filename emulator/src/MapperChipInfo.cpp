@@ -1,5 +1,5 @@
 #include "MapperChipInfo.hpp"
-#include "MemoryBank.hpp"
+#include "Memory.hpp"
 
 namespace gb {
 
@@ -24,10 +24,10 @@ NoMBC::NoMBC(byte ramSizeCode)
 	: IMapperInfo(ramSizeCode)
 {}
 
-OptByteRef NoMBC::ReadRom(MemoryBank& memBank, u16 addr) {
+OptByteRef NoMBC::ReadRom(Memory& mem, u16 addr) {
 	// TODO
 	if (addr < romNEnd)
-		return memBank.Access(0, addr);
+		return mem.ReadRom(addr);
 
 	return {};
 }
@@ -54,20 +54,9 @@ byte MBC1::Bank(u16 addr) const {
 	return _bank2 << 5 | _bank1;
 }
 
-OptByteRef MBC1::ReadRom(MemoryBank& memBank, u16 addr) {
+OptByteRef MBC1::ReadRom(Memory& mem, u16 addr) {
 	if (addr < romNEnd)
-		return memBank.Access(Bank(addr), addr);
-
-	if (addr < rom0End) {
-		if (_mode == 0)
-			return memBank.Access(0, addr);
-
-		// mode 1 behavior
-		// [20-19]: bank2, [18-14]: 0b00000
-		return memBank.Access(_bank2 << 5, addr);
-	}
-	else if (addr < romNEnd)
-		return memBank.Access(Bank(addr), addr);
+		return mem.ReadRom((Bank(addr) << 14) | (addr & 0x3FFF));
 
 	return {};
 }
@@ -92,7 +81,7 @@ bool MBC1::AttemptWriteRam(u16 addr, byte val) {
 		return true;
 	}
 
-	if (!_ramAvailable || addr < 0xA000 || addr > 0xBFFF)
+	if (!_ramAvailable || addr < vramEnd || addr >= ramCartEnd)
 		return false;
 
 	// TODO
@@ -101,8 +90,8 @@ bool MBC1::AttemptWriteRam(u16 addr, byte val) {
 }
 
 OptByteRef MBC1::ReadRam(u16 addr) {
-	if (!_ramAvailable || addr < 0xA000 || addr > 0xBFFF)
-		return std::nullopt;
+	if (!_ramAvailable || addr < vramEnd || addr >= ramCartEnd)
+		return {};
 
 	u16 physicalAddr = static_cast<u16>(_bank2) << 13 | (addr & 0x1FFF);
 	return _ram[physicalAddr];

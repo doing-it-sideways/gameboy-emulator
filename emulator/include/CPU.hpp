@@ -1,9 +1,13 @@
 #pragma once
 
 #include "Core.hpp"
-#include "Memory.hpp"
 
-namespace gb::cpu {
+namespace gb {
+
+class Memory;
+
+namespace cpu {
+
 /* 
 control unit(decodes instructions)
 register file (holds cpu state in registers)
@@ -64,7 +68,7 @@ public:
 			return Zero << 7 | Subtract << 6 | HalfCarry << 5 | Carry << 4;
 		}
 
-		Flags& operator=(byte b) {
+		constexpr Flags& operator=(byte b) {
 			Zero = b & (1 << 7) ? 1 : 0;
 			Subtract = b & (1 << 6) ? 1 : 0;
 			HalfCarry = b & (1 << 5) ? 1 : 0;
@@ -86,12 +90,9 @@ public:
 
 #pragma region 16 bit register definitions
 		// const & non-const versions because of hl+ and hl- :/
-#define U16GETTERS(r1, r2) \
-		constexpr u16 r1##r2() const { return (static_cast<u16>(r1) << 8) + r2; } \
-		constexpr u16 r1##r2() { return (static_cast<u16>(r1) << 8) + r2; }
-
 #define REGISTER16(r1, r2) \
-		U16GETTERS(r1, r2) \
+		constexpr u16 r1##r2() const { return (static_cast<u16>(r1) << 8) + r2; } \
+		constexpr u16 r1##r2() { return (static_cast<u16>(r1) << 8) + r2; } \
 		constexpr void r1##r2(u16 val) { \
 			r1 = static_cast<u8>((val & 0xFF00) >> 8); \
 			r2 = static_cast<u8>(val & 0x00FF); \
@@ -105,7 +106,7 @@ public:
 		} \
 		constexpr void hl##suffix(u16 val) { hl(val expr 1); }
 
-		U16GETTERS(a, f); // low byte undefined for af, dont allow setting
+		REGISTER16(a, f); // low byte is normally undefined, but pop af needs to function
 		REGISTER16(b, c);
 		REGISTER16(d, e);
 		REGISTER16(h, l);
@@ -135,16 +136,8 @@ public:
 // --- Functions ---
 public:
 	// Mimic booting up the cpu
-	explicit Context(rom::RomData&& romData);
+	explicit Context(Memory& memory);
 
-	// For stepping through instead of running
-	constexpr void Start() { _isRunning = true; }
-
-	// Handles the update loop itself.
-	void Run();
-
-	// Update "loop".
-	// Is public so the cpu can be easily stepped through from outside the class.
 	bool Update();
 
 	// Increment and Decrement functions for 16-bit addresses
@@ -169,17 +162,13 @@ private:
 
 // --- Vars ---
 private:
-	Memory _memory;
+	Memory& _memory;
 
 	// Count the number of mCycles that have happened
 	u64 _mCycles = 0;
 
 	// Next instruction to be executed.
 	InstrFunc _handler;
-
-	// Relating to the run loop
-	bool _isRunning = false;
-	bool _isPaused = false;
 
 	// See halt op code to understand behavior
 	bool _isHalted = false;
@@ -293,7 +282,8 @@ enum class OpCode : byte {
 	undefined // $D3, $DB, $DD, $E3, $E4, $EB, $EC, $ED, $F4, $FC, and $FD
 };
 
-} // namespace gb::cpu
+} // namespace cpu
+} // namespace gb
 
 constexpr bool operator==(gb::cpu::OpCode op, gb::byte b) {
 	return static_cast<gb::byte>(op) == b;

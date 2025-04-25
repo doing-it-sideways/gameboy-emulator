@@ -8,6 +8,7 @@
 #endif
 
 #include "CPU.hpp"
+#include "Memory.hpp"
 
 namespace gb::cpu {
 
@@ -50,19 +51,23 @@ using Addr16Setter = void(Context::RegisterFile::*)(u16);
 
 // Wrapper struct so that indirect hl access gets handled properly for 8-bit registers
 struct R8Reg {
+	Context cpu;
 	Memory& mem;
 	byte& reg;
 	const bool isIndirectHL;
 
-	constexpr R8Reg(Memory& memory, byte& val, bool isHL = false)
-		: mem(memory)
+	constexpr R8Reg(Context& ctx, Memory& memory, byte& val, bool isHL = false)
+		: cpu(ctx)
+		, mem(memory)
 		, reg(val)
 		, isIndirectHL(isHL)
 	{}
 
 	constexpr R8Reg& operator=(byte data) {
-		if (isIndirectHL)
+		if (isIndirectHL) {
 			mem.Write(reg, data);
+			cpu.MCycle();
+		}
 		else
 			reg = data;
 
@@ -77,36 +82,50 @@ struct R8Reg {
 
 	constexpr bool operator==(byte val) { return reg == val; }
 
+	constexpr byte operator+(byte val) { return reg + val; }
+	constexpr byte operator-(byte val) { return reg - val; }
 	constexpr byte operator&(byte val) { return reg & val; }
 	constexpr byte operator|(byte val) { return reg | val; }
 	constexpr byte operator^(byte val) { return reg ^ val; }
 	constexpr byte operator<<(byte val) { return reg << val; }
 	constexpr byte operator>>(byte val) { return reg >> val; }
 
+	static friend constexpr byte operator+(byte a, R8Reg& b) { return a + b.reg; }
+	static friend constexpr byte operator-(byte a, R8Reg& b) { return a - b.reg; }
 	static friend constexpr byte operator&(byte a, R8Reg& b) { return a & b.reg; }
 	static friend constexpr byte operator|(byte a, R8Reg& b) { return a | b.reg; }
 	static friend constexpr byte operator^(byte a, R8Reg& b) { return a ^ b.reg; }
 	static friend constexpr byte operator<<(byte a, R8Reg& b) { return a >> b.reg; }
 	static friend constexpr byte operator>>(byte a, R8Reg& b) { return a << b.reg; }
+
+	static friend constexpr byte& operator&=(byte& a, R8Reg& b) { a &= b.reg; return a; }
+	static friend constexpr byte& operator|=(byte& a, R8Reg& b) { a |= b.reg; return a; }
+	static friend constexpr byte& operator^=(byte& a, R8Reg& b) { a ^= b.reg; return a; }
+	static friend constexpr byte& operator<<=(byte& a, R8Reg& b) { a <<= b.reg; return a; }
+	static friend constexpr byte& operator>>=(byte& a, R8Reg& b) { a >>= b.reg; return a; }
+
+	// will only happen on accumulator, no overloads for all registers
+	static friend constexpr byte& operator+=(byte& a, R8Reg& b) { a += b.reg; return a; }
+	static friend constexpr byte& operator-=(byte& a, R8Reg& b) { a -= b.reg; return a; }
 };
 
-#pragma region value retrieving functions
+#pragma region helper functions
 // Transform value [0, 7] into an 8-bit register for use.
-static R8Reg R8_FromBits(Context::RegisterFile& regs, Memory& mem, byte val) {
+static R8Reg R8_FromBits(Context& cpu, Memory& mem, byte val) {
 	assert(val < 8);
 
 	switch (val) {
-	case 0: return { mem, regs.b };
-	case 1: return { mem, regs.c };
-	case 2: return { mem, regs.d };
-	case 3: return { mem, regs.e };
-	case 4: return { mem, regs.h };
-	case 5: return { mem, regs.l };
+	case 0: return { cpu, mem, cpu.reg.b };
+	case 1: return { cpu, mem, cpu.reg.c };
+	case 2: return { cpu, mem, cpu.reg.d };
+	case 3: return { cpu, mem, cpu.reg.e };
+	case 4: return { cpu, mem, cpu.reg.h };
+	case 5: return { cpu, mem, cpu.reg.l };
 		  
 	// Load byte stored in the location pointed to by hl
-	case 6: return { mem, mem[regs.hl()], true };
+	case 6: return { cpu, mem, mem[cpu.reg.hl()], true };
 
-	case 7: return { mem, regs.a };
+	case 7: return { cpu, mem, cpu.reg.a };
 	default: std::unreachable();
 	}
 }
@@ -181,6 +200,20 @@ constexpr static Addr16Getter R16Stk_GetFromBits(byte val) {
 	}
 }
 
+// Transforms a value [0, 3] into a function pointer to a 16-bit register getter (stack).
+constexpr static Addr16Setter R16Stk_SetFromBits(byte val) {
+	assert(val < 4);
+	using rf = Context::RegisterFile;
+
+	switch (val) {
+	case 0: return &rf::bc;
+	case 1: return &rf::de;
+	case 2: return &rf::hl;
+	case 3: return &rf::af;
+	default: std::unreachable();
+	}
+}
+
 // Transforms a value [0, 3] into a check for a certain value in the flags.
 static bool FlagCond(Context::Flags flags, byte val) {
 	assert(val < 4);
@@ -215,8 +248,7 @@ static u16 Read2(Context& cpu, Memory& mem) {
 
 	return hi << 8 | lo;
 }
-
-#pragma endregion value retrieving functions
+#pragma endregion helper functions
 
 // Forward declared because it handles calling all cb prefixed instrs.
 // Needed for putting it in the instruction map.
@@ -241,8 +273,8 @@ INSTR ld_r8_r8(Context& cpu, Memory& mem) {
 	byte destVal = (cpu.ir & 0b00'111'000) >> 3;
 	byte srcVal = cpu.ir & 0b00000'111;
 
-	R8Reg dest = R8_FromBits(cpu.reg, mem, destVal);
-	R8Reg src = R8_FromBits(cpu.reg, mem, srcVal);
+	R8Reg dest = R8_FromBits(cpu, mem, destVal);
+	R8Reg src = R8_FromBits(cpu, mem, srcVal);
 
 	dest = src;
 
@@ -253,7 +285,7 @@ INSTR ld_r8_imm8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	byte destVal = (cpu.ir & 0b00'111'000) >> 3;
-	R8Reg reg = R8_FromBits(cpu.reg, mem, destVal);
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
 
 	reg = Read(cpu, mem);
 	cpu.MCycle();
@@ -363,64 +395,199 @@ INSTR ld_sp_hl(Context& cpu, Memory& mem) {
 }
 
 INSTR ld_hl_spimm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	// TODO: not quite m-cycle accuracy
+	byte e = Read(cpu, mem);
+	cpu.reg.hl(cpu.reg.sp + e);
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = 0;
+	flags.Subtract = 0;
+	flags.HalfCarry = (cpu.reg.l & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.l & 0b10000000) ? 1 : 0;
+
+	cpu.MCycle(2);
 }
 
 INSTR push_r16stk(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
+	Addr16Getter handle = R16Stk_GetFromBits(destVal);
+
+	u16 data = (cpu.reg.*handle)();
+
+	mem[--cpu.reg.sp] = data & 0x00FF;
+	cpu.MCycle();
+
+	mem[--cpu.reg.sp] = (data & 0xFF00) >> 8;
+	cpu.MCycle();
 }
 
 INSTR pop_r16stk(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = (cpu.ir & 0b00'11'0000) >> 4;
+	Addr16Setter handle = R16Stk_SetFromBits(destVal);
+
+	byte lo = mem[cpu.reg.sp++];
+	cpu.MCycle();
+
+	u16 hi = mem[cpu.reg.sp++];
+	cpu.MCycle();
+
+	(cpu.reg.*handle)(hi << 8 | lo);
 }
 #pragma endregion 16-bit loads
 
 #pragma region 8-bit arithmetic/logical instrucitons
 INSTR add_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = cpu.ir & 0b00000'111;
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
+
+	cpu.reg.a += reg;
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
+	flags.Subtract = 0;
+	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR add_imm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte data = Read(cpu, mem);
+	cpu.reg.a += data;
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
+	flags.Subtract = 0;
+	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR adc_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = cpu.ir & 0b00000'111;
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
+	
+	auto& flags = cpu.reg.f;
+	cpu.reg.a += reg + flags.Carry;
+	
+	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
+	flags.Subtract = 0;
+	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR adc_imm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte data = Read(cpu, mem);
+	auto& flags = cpu.reg.f;
+	cpu.reg.a += data + flags.Carry;
+
+	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
+	flags.Subtract = 0;
+	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR sub_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = cpu.ir & 0b00000'111;
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
+
+	cpu.reg.a -= reg;
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
+	flags.Subtract = 1;
+	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR sub_imm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte data = Read(cpu, mem);
+	cpu.reg.a -= data;
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
+	flags.Subtract = 1;
+	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR sbc_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = cpu.ir & 0b00000'111;
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
+
+	auto& flags = cpu.reg.f;
+	cpu.reg.a = cpu.reg.a - reg - flags.Carry;
+
+	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
+	flags.Subtract = 1;
+	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR sbc_imm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte data = Read(cpu, mem);
+
+	auto& flags = cpu.reg.f;
+	cpu.reg.a = cpu.reg.a - data - flags.Carry;
+
+	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
+	flags.Subtract = 1;
+	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR cp_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = cpu.ir & 0b00000'111;
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
+
+	byte res = cpu.reg.a - reg;
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = (res == 0) ? 1 : 0;
+	flags.Subtract = 1;
+	flags.HalfCarry = (res & 0b00001000) ? 1 : 0;
+	flags.Carry = (res & 0b10000000) ? 1 : 0;
 }
 
 INSTR cp_imm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte data = Read(cpu, mem);
+	byte res = cpu.reg.a - data;
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = (res == 0) ? 1 : 0;
+	flags.Subtract = 1;
+	flags.HalfCarry = (res & 0b00001000) ? 1 : 0;
+	flags.Carry = (res & 0b10000000) ? 1 : 0;
 }
 
 INSTR inc_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	byte destVal = (cpu.ir & 0b00'111'000) >> 3;
-	R8Reg reg = R8_FromBits(cpu.reg, mem, destVal);
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
 
 	++reg;
 
@@ -436,7 +603,7 @@ INSTR dec_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	byte destVal = (cpu.ir & 0b00'111'000) >> 3;
-	R8Reg reg = R8_FromBits(cpu.reg, mem, destVal);
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
 
 	--reg;
 
@@ -449,28 +616,64 @@ INSTR dec_r8(Context& cpu, Memory& mem) {
 }
 
 INSTR and_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = cpu.ir & 0b00000'111;
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
+
+	cpu.reg.a &= reg;
+
+	if (cpu.reg.a == 0)
+		cpu.reg.f = 0xA0;	// Z0H0
+	else
+		cpu.reg.f = 0;		// 0000
 }
 
 INSTR and_imm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte data = Read(cpu, mem);
+	cpu.reg.a &= data;
+
+	if (cpu.reg.a == 0)
+		cpu.reg.f = 0xA0;	// Z0H0
+	else
+		cpu.reg.f = 0;		// 0000
 }
 
 INSTR or_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte destVal = cpu.ir & 0b00000'111;
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
+
+	cpu.reg.a |= reg;
+
+	if (cpu.reg.a == 0)
+		cpu.reg.f = 1 << 7; // Z000
+	else
+		cpu.reg.f = 0;		// 0000
 }
 
 INSTR or_imm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte data = Read(cpu, mem);
+	cpu.reg.a |= data;
+
+	if (cpu.reg.a == 0)
+		cpu.reg.f = 1 << 7; // Z000
+	else
+		cpu.reg.f = 0;		// 0000;
 }
 
 INSTR xor_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	byte destVal = cpu.ir & 0b00000'111;
-	R8Reg reg = R8_FromBits(cpu.reg, mem, destVal);
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
 
-	cpu.reg.a = cpu.reg.a ^ reg;
+	cpu.reg.a ^= reg;
 
 	if (cpu.reg.a == 0)
 		cpu.reg.f = 1 << 7; // Z000
@@ -479,23 +682,74 @@ INSTR xor_r8(Context& cpu, Memory& mem) {
 }
 
 INSTR xor_imm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	byte data = Read(cpu, mem);
+	cpu.reg.a ^= data;
+
+	if (cpu.reg.a == 0)
+		cpu.reg.f = 1 << 7; // Z000
+	else
+		cpu.reg.f = 0;		// 0000
 }
 
 INSTR ccf(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	auto& flags = cpu.reg.f;
+	flags.Subtract = 0;
+	flags.HalfCarry = 0;
+	flags.Carry = ~flags.Carry;
 }
 
 INSTR scf(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	auto& flags = cpu.reg.f;
+	flags.Subtract = 0;
+	flags.HalfCarry = 0;
+	flags.Carry = 1;
 }
 
 INSTR daa(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	auto& flags = cpu.reg.f;
+	byte adjustment = 0;
+	
+	if (flags.Subtract == 1) {
+		if (flags.HalfCarry == 1)
+			adjustment += 0x6;
+
+		if (flags.Carry == 1)
+			adjustment += 0x60;
+
+		cpu.reg.a -= adjustment;
+	}
+	else {
+		if (flags.HalfCarry == 1 || (cpu.reg.a & 0xF) > 0x9)
+			adjustment += 0x6;
+
+		if (flags.Carry == 1 || cpu.reg.a > 0x99) {
+			adjustment += 0x60;
+			flags.Carry = 1;
+		}
+
+		cpu.reg.a += adjustment;
+	}
+
+	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
+	flags.HalfCarry = 0;
 }
 
 INSTR cpl(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	cpu.reg.a = ~cpu.reg.a;
+
+	auto& flags = cpu.reg.f;
+	flags.Subtract = 1;
+	flags.HalfCarry = 1;
 }
 #pragma endregion 8-bit arithmetic/logical instrucitons
 

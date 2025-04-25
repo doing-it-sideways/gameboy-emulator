@@ -6,7 +6,6 @@
 
 #include "Core.hpp"
 #include "MapperChipInfo.hpp"
-#include "MemoryBank.hpp"
 #include "ROM.hpp"
 
 namespace gb {
@@ -19,6 +18,10 @@ public:
 	auto operator[](this Self&& self, u16 addr);
 
 	byte& Read(u16 addr);
+
+	// Used by mapper chips to avoid infinite indirect recursion.
+	byte& ReadRom(u16 physicalAddr) { return _romData[physicalAddr]; }
+
 	void Write(u16 addr, byte val);
 
 	std::vector<byte> Dump() const; // TODO
@@ -44,15 +47,15 @@ private:
 private:
 	// TODO: funcs for setting up rom/ram values/registers/etc
 
-private:
-	rom::RomData _romData;
+private:	
+	std::array<byte, 0x1800> _vram; // video ram
+	std::array<byte, 0x80> _hram;	// high ram / zero page.
+	byte _ieFlag;					// Interrupt enable flag
+
+	rom::RomData _romData;			// cartridge rom
 	std::vector<byte> _ramInternal; // no gbc support yet, size always 0x2000
-	std::array<byte, 0x80> _hram; // high ram / zero page. 
 
 	std::unique_ptr<IMapperInfo> _mapperChipData;
-
-	MemoryBank _romBanksCart; // extra cartridge rom
-	MemoryBank _ramDataCart;  // cartridge ram
 
 	const MapperChip _mapperChip = MapperChip::UNKNOWN;
 };

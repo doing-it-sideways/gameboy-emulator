@@ -19,6 +19,7 @@ enum class MapperChip : byte {
 	UNKNOWN,
 	ROM_ONLY,
 	MBC1,
+	MBC1_MULTI,
 	MBC2,
 	MBC3,
 	MBC30,
@@ -31,8 +32,7 @@ enum class MapperChip : byte {
 	TAMA5
 };
 
-class MemoryBank;
-
+class Memory;
 using OptByteRef = std::optional<std::reference_wrapper<byte>>;
 
 struct IMapperInfo {
@@ -45,7 +45,7 @@ struct IMapperInfo {
 	virtual byte Bank(u16 addr) const = 0;
 
 	// Each cartridge has a specific way of reading rom values. Let the 
-	virtual OptByteRef ReadRom(MemoryBank& memBank, u16 addr) = 0;
+	virtual OptByteRef ReadRom(Memory& mem, u16 addr) = 0;
 	
 	// Updates cartridge-specific registers or writes to
 	// cartridge ram (if present).
@@ -69,7 +69,7 @@ public:
 
 	byte Bank(u16 addr) const override { return 0; }
 
-	OptByteRef ReadRom(MemoryBank& memBank, u16 addr) override;
+	OptByteRef ReadRom(Memory& mem, u16 addr) override;
 
 	bool AttemptWriteRam(u16 addr, byte val);
 
@@ -82,7 +82,7 @@ public:
 
 	byte Bank(u16 addr) const override;
 
-	OptByteRef ReadRom(MemoryBank& memBank, u16 addr) override;
+	OptByteRef ReadRom(Memory& mem, u16 addr) override;
 
 	bool AttemptWriteRam(u16 addr, byte val) override;
 

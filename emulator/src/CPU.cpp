@@ -1,35 +1,20 @@
 #include "CPU.hpp"
 #include "ConstexprAdditions.hpp"
+#include "Memory.hpp"
 
 namespace gb::cpu {
 
 // https://gbdev.io/pandocs/Power_Up_Sequence.html
 // DMG -- todo?: allow for different cpus: DMG0, MGB, maybe CGB support later?
-Context::Context(rom::RomData&& romData)
+Context::Context(Memory& memory)
 	: reg{ .pc = 0x0100, .sp = 0xFFFE,
 		   .a = 0x01, .f = { 1, 0, 1, 1 },
 		   .c = 0x13, .d = 0, .e = 0xD8, .h = 0x01, .l = 0x4D }
-	, ir(romData[0x0100])
+	, ir(memory[0x0100])
 	, ie(0x00)
-	, _memory(std::move(romData))
+	, _memory(memory)
 {
 	// TODO
-}
-
-void Context::Run() {
-	_isRunning = true;
-
-	while (_isRunning) {
-		if (_isPaused) {
-			// TODO: add delay
-			continue;
-		}
-
-		if (!Update()) {
-			debug::cexpr::println(stderr, "Something went wrong!");
-			return;
-		}
-	}
 }
 
 bool Context::Update() {
@@ -44,13 +29,11 @@ bool Context::Update() {
 		// fetch and execute overlap on the SM83.
 		if (!Fetch()) {
 			// TODO
-			_isRunning = false;
 			return false;
 		}
 
 		if (!Exec()) {
 			// TODO
-			_isRunning = false;
 			return false;
 		}
 	}

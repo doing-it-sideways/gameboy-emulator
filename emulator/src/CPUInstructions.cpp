@@ -822,7 +822,7 @@ INSTR rlca(Context& cpu, Memory& mem) {
 	auto& flags = cpu.reg.f;
 	flags.Zero = 0;
 	flags.Subtract = 0;
-	flags.Subtract = 0;
+	flags.HalfCarry = 0;
 	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
@@ -834,16 +834,32 @@ INSTR rrca(Context& cpu, Memory& mem) {
 	auto& flags = cpu.reg.f;
 	flags.Zero = 0;
 	flags.Subtract = 0;
-	flags.Subtract = 0;
+	flags.HalfCarry = 0;
 	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 }
 
 INSTR rla(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = 0;
+	flags.Subtract = 0;
+	flags.HalfCarry = 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	
+	cpu.reg.a = std::rotl(cpu.reg.a & 0b01111111u, 1);
 }
 
 INSTR rra(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	auto& flags = cpu.reg.f;
+	flags.Zero = 0;
+	flags.Subtract = 0;
+	flags.HalfCarry = 0;
+	flags.Carry = cpu.reg.a & 1;
+
+	cpu.reg.a = std::rotr(cpu.reg.a & 0b11111110u, 1);
 }
 #pragma endregion rotate, shift, bit manipulation
 
@@ -858,15 +874,28 @@ INSTR jp_imm16(Context& cpu, Memory& mem) {
 }
 
 INSTR jp_hl(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	cpu.reg.pc = cpu.reg.hl();
 }
 
 INSTR jp_cond_imm16(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	u16 addr = Read2(cpu, mem);
+	byte condVal = (cpu.ir & 0b000'11'000) >> 3;
+
+	if (FlagCond(cpu.reg.f, condVal)) {
+		cpu.reg.pc = addr;
+		cpu.MCycle();
+	}
 }
 
 INSTR jr_imm8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	sbyte relativeAddr = Read(cpu, mem);
+	cpu.reg.pc += relativeAddr;
 }
 
 INSTR jr_cond_imm8(Context& cpu, Memory& mem) {
@@ -879,8 +908,6 @@ INSTR jr_cond_imm8(Context& cpu, Memory& mem) {
 		cpu.reg.pc += relativeAddr;
 		cpu.MCycle();
 	}
-
-	cpu.MCycle();
 }
 
 INSTR call_imm16(Context& cpu, Memory& mem) {
@@ -972,13 +999,7 @@ INSTR cb_res_b3_r8(Context& cpu, Memory&) {
 INSTR cb_set_b3_r8(Context& cpu, Memory&) {
 	NOIMPL();
 }
-
-INSTR cb_prefix(Context& cpu, Memory&) {
-	NOIMPL();
-}
 #pragma endregion prefixed (cb) instructions
-
-#undef INSTR
 
 using InstrPair = std::pair<OpCode, Context::InstrFunc>; // shorthand
 #define INSTRMAP(x) { OpCode::##x, &x }
@@ -1086,6 +1107,13 @@ static constexpr auto cbInstrMap = std::to_array<VariableInstrData>(
 	INSTRDATA(cb_set_b3_r8, 0b00'111'111),
 });
 
+
+// Uses cbInstrMap, similar to Context::Fetch but just for cb prefixed instructions.
+INSTR cb_prefix(Context& cpu, Memory&) {
+	NOIMPL();
+}
+
+#undef INSTR
 #undef INSTRMAP
 
 // A list of unused op codes. If an op code in this list is somehow chosen,

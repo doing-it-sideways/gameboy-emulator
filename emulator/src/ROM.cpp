@@ -26,7 +26,7 @@ static constexpr auto CartridgeType = mapbox::eternal::map<u8, std::string_view>
 });
 
 // Note: GBC only checks first 24 bytes, DMG/MGB check all bytes
-static constexpr std::array<byte, 0x133 - 0x104 + 1> nintendoLogoBytes = {
+static constexpr std::array<byte, 0x133 - 0x104 + 1> logoBytes = {
 	0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00,
 	0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC,
 	0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC,
@@ -56,7 +56,7 @@ std::optional<RomData> Load(const std::filesystem::path& romPath) {
 	// local anonymous struct babyyyyy
 	struct {
 		byte entryPoint[4];
-		byte nintendoLogo[nintendoLogoBytes.size()];
+		byte logo[logoBytes.size()];
 		
 		union {
 			char title[16];
@@ -105,8 +105,8 @@ std::optional<RomData> Load(const std::filesystem::path& romPath) {
 #pragma region debug printing for rom load
 	std::println("----- Rom Loaded -----");
 	// TODO: stop emulation when logo check fails
-	std::println("\t- Nintendo Logo Check -- Matching? : {}",
-				 std::ranges::equal(nintendoLogoBytes, header->nintendoLogo));
+	std::println("\t- Logo Check -- Matching? : {}",
+				 std::ranges::equal(logoBytes, header->logo));
 
 	// 0x33: new licensee code table should be used
 	if (header->oldLicenseeCode == 0x33) {

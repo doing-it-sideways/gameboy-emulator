@@ -90,23 +90,23 @@ struct R8Reg {
 	constexpr byte operator<<(byte val) { return reg << val; }
 	constexpr byte operator>>(byte val) { return reg >> val; }
 
-	constexpr static friend byte operator+(byte a, R8Reg& b) { return a + b.reg; }
-	constexpr static friend byte operator-(byte a, R8Reg& b) { return a - b.reg; }
-	constexpr static friend byte operator&(byte a, R8Reg& b) { return a & b.reg; }
-	constexpr static friend byte operator|(byte a, R8Reg& b) { return a | b.reg; }
-	constexpr static friend byte operator^(byte a, R8Reg& b) { return a ^ b.reg; }
-	constexpr static friend byte operator<<(byte a, R8Reg& b) { return a >> b.reg; }
-	constexpr static friend byte operator>>(byte a, R8Reg& b) { return a << b.reg; }
+	constexpr friend byte operator+(byte a, R8Reg& b) { return a + b.reg; }
+	constexpr friend byte operator-(byte a, R8Reg& b) { return a - b.reg; }
+	constexpr friend byte operator&(byte a, R8Reg& b) { return a & b.reg; }
+	constexpr friend byte operator|(byte a, R8Reg& b) { return a | b.reg; }
+	constexpr friend byte operator^(byte a, R8Reg& b) { return a ^ b.reg; }
+	constexpr friend byte operator<<(byte a, R8Reg& b) { return a >> b.reg; }
+	constexpr friend byte operator>>(byte a, R8Reg& b) { return a << b.reg; }
 
-	constexpr static friend byte& operator&=(byte& a, R8Reg& b) { a &= b.reg; return a; }
-	constexpr static friend byte& operator|=(byte& a, R8Reg& b) { a |= b.reg; return a; }
-	constexpr static friend byte& operator^=(byte& a, R8Reg& b) { a ^= b.reg; return a; }
-	constexpr static friend byte& operator<<=(byte& a, R8Reg& b) { a <<= b.reg; return a; }
-	constexpr static friend byte& operator>>=(byte& a, R8Reg& b) { a >>= b.reg; return a; }
+	constexpr friend byte& operator&=(byte& a, R8Reg& b) { a &= b.reg; return a; }
+	constexpr friend byte& operator|=(byte& a, R8Reg& b) { a |= b.reg; return a; }
+	constexpr friend byte& operator^=(byte& a, R8Reg& b) { a ^= b.reg; return a; }
+	constexpr friend byte& operator<<=(byte& a, R8Reg& b) { a <<= b.reg; return a; }
+	constexpr friend byte& operator>>=(byte& a, R8Reg& b) { a >>= b.reg; return a; }
 
 	// will only happen on accumulator, no overloads for all registers
-	constexpr static friend byte& operator+=(byte& a, R8Reg& b) { a += b.reg; return a; }
-	constexpr static friend byte& operator-=(byte& a, R8Reg& b) { a -= b.reg; return a; }
+	constexpr friend byte& operator+=(byte& a, R8Reg& b) { a += b.reg; return a; }
+	constexpr friend byte& operator-=(byte& a, R8Reg& b) { a -= b.reg; return a; }
 };
 
 #pragma region helper functions

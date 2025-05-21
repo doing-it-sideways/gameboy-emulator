@@ -90,23 +90,23 @@ struct R8Reg {
 	constexpr byte operator<<(byte val) { return reg << val; }
 	constexpr byte operator>>(byte val) { return reg >> val; }
 
-	static friend constexpr byte operator+(byte a, R8Reg& b) { return a + b.reg; }
-	static friend constexpr byte operator-(byte a, R8Reg& b) { return a - b.reg; }
-	static friend constexpr byte operator&(byte a, R8Reg& b) { return a & b.reg; }
-	static friend constexpr byte operator|(byte a, R8Reg& b) { return a | b.reg; }
-	static friend constexpr byte operator^(byte a, R8Reg& b) { return a ^ b.reg; }
-	static friend constexpr byte operator<<(byte a, R8Reg& b) { return a >> b.reg; }
-	static friend constexpr byte operator>>(byte a, R8Reg& b) { return a << b.reg; }
+	constexpr static friend byte operator+(byte a, R8Reg& b) { return a + b.reg; }
+	constexpr static friend byte operator-(byte a, R8Reg& b) { return a - b.reg; }
+	constexpr static friend byte operator&(byte a, R8Reg& b) { return a & b.reg; }
+	constexpr static friend byte operator|(byte a, R8Reg& b) { return a | b.reg; }
+	constexpr static friend byte operator^(byte a, R8Reg& b) { return a ^ b.reg; }
+	constexpr static friend byte operator<<(byte a, R8Reg& b) { return a >> b.reg; }
+	constexpr static friend byte operator>>(byte a, R8Reg& b) { return a << b.reg; }
 
-	static friend constexpr byte& operator&=(byte& a, R8Reg& b) { a &= b.reg; return a; }
-	static friend constexpr byte& operator|=(byte& a, R8Reg& b) { a |= b.reg; return a; }
-	static friend constexpr byte& operator^=(byte& a, R8Reg& b) { a ^= b.reg; return a; }
-	static friend constexpr byte& operator<<=(byte& a, R8Reg& b) { a <<= b.reg; return a; }
-	static friend constexpr byte& operator>>=(byte& a, R8Reg& b) { a >>= b.reg; return a; }
+	constexpr static friend byte& operator&=(byte& a, R8Reg& b) { a &= b.reg; return a; }
+	constexpr static friend byte& operator|=(byte& a, R8Reg& b) { a |= b.reg; return a; }
+	constexpr static friend byte& operator^=(byte& a, R8Reg& b) { a ^= b.reg; return a; }
+	constexpr static friend byte& operator<<=(byte& a, R8Reg& b) { a <<= b.reg; return a; }
+	constexpr static friend byte& operator>>=(byte& a, R8Reg& b) { a >>= b.reg; return a; }
 
 	// will only happen on accumulator, no overloads for all registers
-	static friend constexpr byte& operator+=(byte& a, R8Reg& b) { a += b.reg; return a; }
-	static friend constexpr byte& operator-=(byte& a, R8Reg& b) { a -= b.reg; return a; }
+	constexpr static friend byte& operator+=(byte& a, R8Reg& b) { a += b.reg; return a; }
+	constexpr static friend byte& operator-=(byte& a, R8Reg& b) { a -= b.reg; return a; }
 };
 
 #pragma region helper functions
@@ -228,6 +228,26 @@ constexpr static bool FlagCond(Context::Flags flags, byte val) {
 
 	debug::cexpr::println(stderr, "Unknown condition check: {:#04b}", val);
 	return false;
+}
+
+constexpr static void SetAllFlags(Context& cpu, bool z, bool n, bool h, bool c) {
+	cpu.reg.f = Context::Flags{ .Zero = static_cast<byte>(z),
+								.Subtract = static_cast<byte>(n),
+								.HalfCarry = static_cast<byte>(h),
+								.Carry = static_cast<byte>(c) };
+}
+
+constexpr static void SetFlagsIfAOrZero(Context& cpu, byte flagVal) {
+	if (cpu.reg.a == 0)
+		cpu.reg.f = flagVal;
+	else
+		cpu.reg.f = 0;
+}
+
+constexpr static void SetCarryFlags(Context& cpu, bool h, bool c) {
+	auto& f = cpu.reg.f;
+	f.HalfCarry = static_cast<byte>(h);
+	f.Carry = static_cast<byte>(c);
 }
 
 // Reads one byte from the memory, increments the program counter
@@ -401,11 +421,12 @@ INSTR ld_hl_spimm8(Context& cpu, Memory& mem) {
 	byte e = Read(cpu, mem);
 	cpu.reg.hl(cpu.reg.sp + e);
 
-	auto& flags = cpu.reg.f;
+	SetAllFlags(cpu, 0, 0, cpu.reg.l & 0b00001000, cpu.reg.l & 0b10000000);
+	/*auto& flags = cpu.reg.f;
 	flags.Zero = 0;
 	flags.Subtract = 0;
 	flags.HalfCarry = (cpu.reg.l & 0b00001000) ? 1 : 0;
-	flags.Carry = (cpu.reg.l & 0b10000000) ? 1 : 0;
+	flags.Carry = (cpu.reg.l & 0b10000000) ? 1 : 0;*/
 
 	cpu.MCycle(2);
 }
@@ -450,11 +471,12 @@ INSTR add_r8(Context& cpu, Memory& mem) {
 
 	cpu.reg.a += reg;
 
-	auto& flags = cpu.reg.f;
+	SetAllFlags(cpu, cpu.reg.a == 0, 0, cpu.reg.a & 0b00001000, cpu.reg.a & 0b10000000);
+	/*auto& flags = cpu.reg.f;
 	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
 	flags.Subtract = 0;
 	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;*/
 }
 
 INSTR add_imm8(Context& cpu, Memory& mem) {
@@ -463,11 +485,7 @@ INSTR add_imm8(Context& cpu, Memory& mem) {
 	byte data = Read(cpu, mem);
 	cpu.reg.a += data;
 
-	auto& flags = cpu.reg.f;
-	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
-	flags.Subtract = 0;
-	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	SetAllFlags(cpu, cpu.reg.a == 0, 0, cpu.reg.a & 0b00001000, cpu.reg.a & 0b10000000);
 }
 
 INSTR adc_r8(Context& cpu, Memory& mem) {
@@ -479,10 +497,7 @@ INSTR adc_r8(Context& cpu, Memory& mem) {
 	auto& flags = cpu.reg.f;
 	cpu.reg.a += reg + flags.Carry;
 	
-	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
-	flags.Subtract = 0;
-	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	SetAllFlags(cpu, cpu.reg.a == 0, 0, cpu.reg.a & 0b00001000, cpu.reg.a & 0b10000000);
 }
 
 INSTR adc_imm8(Context& cpu, Memory& mem) {
@@ -492,10 +507,7 @@ INSTR adc_imm8(Context& cpu, Memory& mem) {
 	auto& flags = cpu.reg.f;
 	cpu.reg.a += data + flags.Carry;
 
-	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
-	flags.Subtract = 0;
-	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	SetAllFlags(cpu, cpu.reg.a == 0, 0, cpu.reg.a & 0b00001000, cpu.reg.a & 0b10000000);
 }
 
 INSTR sub_r8(Context& cpu, Memory& mem) {
@@ -506,11 +518,12 @@ INSTR sub_r8(Context& cpu, Memory& mem) {
 
 	cpu.reg.a -= reg;
 
-	auto& flags = cpu.reg.f;
+	SetAllFlags(cpu, cpu.reg.a == 0, 1, cpu.reg.a & 0b00001000, cpu.reg.a & 0b10000000);
+	/*auto& flags = cpu.reg.f;
 	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
 	flags.Subtract = 1;
 	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;*/
 }
 
 INSTR sub_imm8(Context& cpu, Memory& mem) {
@@ -519,11 +532,7 @@ INSTR sub_imm8(Context& cpu, Memory& mem) {
 	byte data = Read(cpu, mem);
 	cpu.reg.a -= data;
 
-	auto& flags = cpu.reg.f;
-	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
-	flags.Subtract = 1;
-	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	SetAllFlags(cpu, cpu.reg.a == 0, 1, cpu.reg.a & 0b00001000, cpu.reg.a & 0b10000000);
 }
 
 INSTR sbc_r8(Context& cpu, Memory& mem) {
@@ -535,10 +544,7 @@ INSTR sbc_r8(Context& cpu, Memory& mem) {
 	auto& flags = cpu.reg.f;
 	cpu.reg.a = cpu.reg.a - reg - flags.Carry;
 
-	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
-	flags.Subtract = 1;
-	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	SetAllFlags(cpu, cpu.reg.a == 0, 1, cpu.reg.a & 0b00001000, cpu.reg.a & 0b10000000);
 }
 
 INSTR sbc_imm8(Context& cpu, Memory& mem) {
@@ -549,10 +555,7 @@ INSTR sbc_imm8(Context& cpu, Memory& mem) {
 	auto& flags = cpu.reg.f;
 	cpu.reg.a = cpu.reg.a - data - flags.Carry;
 
-	flags.Zero = (cpu.reg.a == 0) ? 1 : 0;
-	flags.Subtract = 1;
-	flags.HalfCarry = (cpu.reg.a & 0b00001000) ? 1 : 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	SetAllFlags(cpu, cpu.reg.a == 0, 1, cpu.reg.a & 0b00001000, cpu.reg.a & 0b10000000);
 }
 
 INSTR cp_r8(Context& cpu, Memory& mem) {
@@ -563,11 +566,12 @@ INSTR cp_r8(Context& cpu, Memory& mem) {
 
 	byte res = cpu.reg.a - reg;
 
-	auto& flags = cpu.reg.f;
+	SetAllFlags(cpu, res == 0, 1, res & 0b00001000, res & 0b10000000);
+	/*auto& flags = cpu.reg.f;
 	flags.Zero = (res == 0) ? 1 : 0;
 	flags.Subtract = 1;
 	flags.HalfCarry = (res & 0b00001000) ? 1 : 0;
-	flags.Carry = (res & 0b10000000) ? 1 : 0;
+	flags.Carry = (res & 0b10000000) ? 1 : 0;*/
 }
 
 INSTR cp_imm8(Context& cpu, Memory& mem) {
@@ -576,11 +580,7 @@ INSTR cp_imm8(Context& cpu, Memory& mem) {
 	byte data = Read(cpu, mem);
 	byte res = cpu.reg.a - data;
 
-	auto& flags = cpu.reg.f;
-	flags.Zero = (res == 0) ? 1 : 0;
-	flags.Subtract = 1;
-	flags.HalfCarry = (res & 0b00001000) ? 1 : 0;
-	flags.Carry = (res & 0b10000000) ? 1 : 0;
+	SetAllFlags(cpu, res == 0, 1, res & 0b00001000, res & 0b10000000);
 }
 
 INSTR inc_r8(Context& cpu, Memory& mem) {
@@ -623,10 +623,11 @@ INSTR and_r8(Context& cpu, Memory& mem) {
 
 	cpu.reg.a &= reg;
 
-	if (cpu.reg.a == 0)
-		cpu.reg.f = 0xA0;	// Z0H0
-	else
-		cpu.reg.f = 0;		// 0000
+	SetFlagsIfAOrZero(cpu, 0xA0); // Z0H0
+	//if (cpu.reg.a == 0)
+	//	cpu.reg.f = 0xA0;	// Z0H0
+	//else
+	//	cpu.reg.f = 0;		// 0000
 }
 
 INSTR and_imm8(Context& cpu, Memory& mem) {
@@ -635,10 +636,7 @@ INSTR and_imm8(Context& cpu, Memory& mem) {
 	byte data = Read(cpu, mem);
 	cpu.reg.a &= data;
 
-	if (cpu.reg.a == 0)
-		cpu.reg.f = 0xA0;	// Z0H0
-	else
-		cpu.reg.f = 0;		// 0000
+	SetFlagsIfAOrZero(cpu, 0xA0); // Z0H0
 }
 
 INSTR or_r8(Context& cpu, Memory& mem) {
@@ -649,10 +647,7 @@ INSTR or_r8(Context& cpu, Memory& mem) {
 
 	cpu.reg.a |= reg;
 
-	if (cpu.reg.a == 0)
-		cpu.reg.f = 1 << 7; // Z000
-	else
-		cpu.reg.f = 0;		// 0000
+	SetFlagsIfAOrZero(cpu, 1 << 7); // Z000
 }
 
 INSTR or_imm8(Context& cpu, Memory& mem) {
@@ -661,10 +656,7 @@ INSTR or_imm8(Context& cpu, Memory& mem) {
 	byte data = Read(cpu, mem);
 	cpu.reg.a |= data;
 
-	if (cpu.reg.a == 0)
-		cpu.reg.f = 1 << 7; // Z000
-	else
-		cpu.reg.f = 0;		// 0000;
+	SetFlagsIfAOrZero(cpu, 1 << 7); // Z000
 }
 
 INSTR xor_r8(Context& cpu, Memory& mem) {
@@ -675,10 +667,7 @@ INSTR xor_r8(Context& cpu, Memory& mem) {
 
 	cpu.reg.a ^= reg;
 
-	if (cpu.reg.a == 0)
-		cpu.reg.f = 1 << 7; // Z000
-	else
-		cpu.reg.f = 0;		// 0000
+	SetFlagsIfAOrZero(cpu, 1 << 7); // Z000
 }
 
 INSTR xor_imm8(Context& cpu, Memory& mem) {
@@ -687,10 +676,7 @@ INSTR xor_imm8(Context& cpu, Memory& mem) {
 	byte data = Read(cpu, mem);
 	cpu.reg.a ^= data;
 
-	if (cpu.reg.a == 0)
-		cpu.reg.f = 1 << 7; // Z000
-	else
-		cpu.reg.f = 0;		// 0000
+	SetFlagsIfAOrZero(cpu, 1 << 7); // Z000
 }
 
 INSTR ccf(Context& cpu, Memory& mem) {
@@ -805,11 +791,12 @@ INSTR add_sp_imm8(Context& cpu, Memory& mem) {
 	sbyte e = Read(cpu, mem);
 	cpu.reg.sp += e;
 
-	auto& flags = cpu.reg.f;
+	SetAllFlags(cpu, 0, 0, cpu.reg.sp & 0b00001000, cpu.reg.sp & 0b10000000);
+	/*auto& flags = cpu.reg.f;
 	flags.Zero = 0;
 	flags.Subtract = 0;
 	flags.HalfCarry = (cpu.reg.sp & 0b00001000) ? 1 : 0;
-	flags.Carry = (cpu.reg.sp & 0b10000000) ? 1 : 0;
+	flags.Carry = (cpu.reg.sp & 0b10000000) ? 1 : 0;*/
 }
 #pragma endregion 16-bit arithmetic
 
@@ -819,11 +806,12 @@ INSTR rlca(Context& cpu, Memory& mem) {
 
 	cpu.reg.a = std::rotl(cpu.reg.a, 1);
 
-	auto& flags = cpu.reg.f;
+	SetAllFlags(cpu, 0, 0, 0, cpu.reg.a & 0b10000000);
+	/*auto& flags = cpu.reg.f;
 	flags.Zero = 0;
 	flags.Subtract = 0;
 	flags.HalfCarry = 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;*/
 }
 
 INSTR rrca(Context& cpu, Memory& mem) {
@@ -831,35 +819,23 @@ INSTR rrca(Context& cpu, Memory& mem) {
 
 	cpu.reg.a = std::rotr(cpu.reg.a, 1);
 
-	auto& flags = cpu.reg.f;
-	flags.Zero = 0;
-	flags.Subtract = 0;
-	flags.HalfCarry = 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
+	SetAllFlags(cpu, 0, 0, 0, cpu.reg.a & 0b10000000);
 }
 
 INSTR rla(Context& cpu, Memory& mem) {
 	PRINTFUNC();
-
-	auto& flags = cpu.reg.f;
-	flags.Zero = 0;
-	flags.Subtract = 0;
-	flags.HalfCarry = 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;
 	
 	cpu.reg.a = std::rotl(cpu.reg.a & 0b01111111u, 1);
+
+	SetAllFlags(cpu, 0, 0, 0, cpu.reg.a & 0b10000000);
 }
 
 INSTR rra(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	auto& flags = cpu.reg.f;
-	flags.Zero = 0;
-	flags.Subtract = 0;
-	flags.HalfCarry = 0;
-	flags.Carry = cpu.reg.a & 1;
-
 	cpu.reg.a = std::rotr(cpu.reg.a & 0b11111110u, 1);
+
+	SetAllFlags(cpu, 0, 0, 0, cpu.reg.a & 0b1);
 }
 #pragma endregion rotate, shift, bit manipulation
 

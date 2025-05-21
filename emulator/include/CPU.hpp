@@ -76,6 +76,13 @@ public:
 
 			return *this;
 		}
+
+		constexpr void SetAllBool(bool z, bool n, bool h, bool c) {
+			Zero = z;
+			Subtract = n;
+			HalfCarry = h;
+			Carry = c;
+		}
 	};
 
 	struct RegisterFile {
@@ -143,6 +150,10 @@ public:
 	// Increment and Decrement functions for 16-bit addresses
 	void Inc(u16 reg16);
 	void Dec(u16 reg16);
+
+	// Stack pop and push implementations.
+	void PushStack(u16 value);
+	u16 PopStack();
 
 	void MCycle(u8 cycles = 1);
 

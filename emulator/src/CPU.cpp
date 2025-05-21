@@ -73,6 +73,25 @@ void Context::Dec(u16 reg16) {
 #endif // DEBUG
 }
 
+void Context::PushStack(u16 value) {
+	_memory[--reg.sp] = (value & 0xFF00) >> 8;
+	MCycle();
+
+	_memory[--reg.sp] = value & 0x00FF;
+	MCycle();
+}
+
+u16 Context::PopStack() {
+	const byte lo = _memory[reg.sp++];
+	MCycle();
+
+	const byte hi = _memory[reg.sp++];
+	MCycle();
+
+	// TODO: handle af?
+	return (hi << 8) | lo;
+}
+
 void Context::MCycle(u8 cycles) {
 	// TODO
 	_mCycles += cycles;

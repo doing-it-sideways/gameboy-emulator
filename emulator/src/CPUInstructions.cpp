@@ -111,7 +111,7 @@ struct R8Reg {
 
 #pragma region helper functions
 // Transform value [0, 7] into an 8-bit register for use.
-static R8Reg R8_FromBits(Context& cpu, Memory& mem, byte val) {
+constexpr static R8Reg R8_FromBits(Context& cpu, Memory& mem, byte val) {
 	assert(val < 8);
 
 	switch (val) {
@@ -215,7 +215,7 @@ constexpr static Addr16Setter R16Stk_SetFromBits(byte val) {
 }
 
 // Transforms a value [0, 3] into a check for a certain value in the flags.
-static bool FlagCond(Context::Flags flags, byte val) {
+constexpr static bool FlagCond(Context::Flags flags, byte val) {
 	assert(val < 4);
 
 	switch (val) {

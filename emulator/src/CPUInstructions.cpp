@@ -439,10 +439,10 @@ INSTR push_r16stk(Context& cpu, Memory& mem) {
 
 	u16 data = (cpu.reg.*handle)();
 
-	mem[--cpu.reg.sp] = data & 0x00FF;
+	mem[--cpu.reg.sp] = (data & 0xFF00) >> 8;
 	cpu.MCycle();
 
-	mem[--cpu.reg.sp] = (data & 0xFF00) >> 8;
+	mem[--cpu.reg.sp] = data & 0x00FF;
 	cpu.MCycle();
 }
 

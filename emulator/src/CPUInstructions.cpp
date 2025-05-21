@@ -458,6 +458,7 @@ INSTR pop_r16stk(Context& cpu, Memory& mem) {
 	u16 hi = mem[cpu.reg.sp++];
 	cpu.MCycle();
 
+	// TODO: handle af?
 	(cpu.reg.*handle)(hi << 8 | lo);
 }
 #pragma endregion 16-bit loads

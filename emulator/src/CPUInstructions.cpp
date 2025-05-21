@@ -51,7 +51,7 @@ using Addr16Setter = void(Context::RegisterFile::*)(u16);
 
 // Wrapper struct so that indirect hl access gets handled properly for 8-bit registers
 struct R8Reg {
-	Context cpu;
+	Context& cpu;
 	Memory& mem;
 	byte& reg;
 	const bool isIndirectHL;

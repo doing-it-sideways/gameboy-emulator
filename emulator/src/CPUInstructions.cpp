@@ -1098,21 +1098,54 @@ static constexpr auto cbInstrMap = std::to_array<VariableInstrData>(
 	INSTRDATA(cb_set_b3_r8, 0b00'111'111),
 });
 
-
-// Uses cbInstrMap, similar to Context::Fetch but just for cb prefixed instructions.
-INSTR cb_prefix(Context& cpu, Memory&) {
-	NOIMPL();
-}
-
-#undef INSTR
-#undef INSTRMAP
-
 // A list of unused op codes. If an op code in this list is somehow chosen,
 // the cpu should hang.
 static constexpr auto InvalidInstrs = std::to_array<byte>(
 {
 	0xD3, 0xDB, 0xDD, 0xE3, 0xE4, 0xEB, 0xEC, 0xED, 0xF4, 0xFC, 0xFD
 });
+
+
+// Uses cbInstrMap, similar to Context::Fetch but just for cb prefixed instructions.
+INSTR cb_prefix(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+	namespace rng = std::ranges;
+
+	cpu.ir = mem[cpu.reg.pc++];
+	cpu.MCycle();
+
+	// Make sure it's not a undefined op code
+	if (rng::contains(InvalidInstrs, cpu.ir)) {
+		cpu.Hang();
+		return;
+	}
+
+	auto it = rng::find_if(
+		cbInstrMap,
+		[&cpu](const VariableInstrData& data) {
+			// Explanation in CPU::Fetch
+			byte opAsByte = static_cast<byte>(data.op);
+			byte irWithIgnore = cpu.ir & ~data.ignoreBits;
+
+			return irWithIgnore == opAsByte;
+		}
+	);
+
+	// Couldn't find a valid instruction, something went wrong.
+	if (it == cbInstrMap.end()) {
+		debug::cexpr::forceprinterr("Couldn't find instruction! ");
+		debug::cexpr::forceprinterr("Op Code (ir): {:#010b} ({:#04x})\n", cpu.ir, cpu.ir);
+
+		cpu.Hang();
+		return;
+	}
+
+	auto handler = it->handler;
+	handler(cpu, mem);
+}
+
+#undef INSTR
+#undef INSTRMAP
 
 bool Context::Fetch() {
 	namespace rng = std::ranges;
@@ -1124,10 +1157,7 @@ bool Context::Fetch() {
 
 	// Make sure it's not a undefined op code
 	if (rng::contains(InvalidInstrs, ir)) {
-		// TODO: hang cpu
-		debug::cexpr::println(stderr, "CPU should hang");
-
-		_handler = nullptr;
+		Hang();
 		return false;
 	}
 
@@ -1163,7 +1193,7 @@ bool Context::Fetch() {
 		debug::cexpr::forceprinterr("Couldn't find instruction! ");
 		debug::cexpr::forceprinterr("Op Code (ir): {:#010b} ({:#04x})\n", ir, ir);
 
-		_handler = nullptr;
+		Hang();
 		return false;
 	}
 

@@ -97,6 +97,13 @@ void Context::MCycle(u8 cycles) {
 	_mCycles += cycles;
 }
 
+void Context::Hang() {
+	// TODO: hang cpu
+	debug::cexpr::println(stderr, "CPU should hang");
+
+	_handler = nullptr;
+}
+
 void Context::Dump() const {
 	debug::cexpr::println("\n---Current CPU State---");
 	byte data = _memory[reg.pc];

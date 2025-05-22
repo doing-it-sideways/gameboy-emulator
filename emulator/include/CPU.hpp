@@ -157,6 +157,8 @@ public:
 
 	void MCycle(u8 cycles = 1);
 
+	void Hang();
+
 #ifdef DEBUG
 	// Dumps current state of the cpu to console or a file
 	void Dump() const;

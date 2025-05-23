@@ -95,11 +95,13 @@ public:
 		byte d, e;
 		byte h, l;
 
-#pragma region 16 bit register definitions
 		// const & non-const versions because of hl+ and hl- :/
-#define REGISTER16(r1, r2) \
+#define U16GETTERS(r1, r2) \
 		constexpr u16 r1##r2() const { return (static_cast<u16>(r1) << 8) + r2; } \
-		constexpr u16 r1##r2() { return (static_cast<u16>(r1) << 8) + r2; } \
+		constexpr u16 r1##r2() { return (static_cast<u16>(r1) << 8) + r2; }
+
+#define REGISTER16(r1, r2) \
+		U16GETTERS(r1, r2) \
 		constexpr void r1##r2(u16 val) { \
 			r1 = static_cast<u8>((val & 0xFF00) >> 8); \
 			r2 = static_cast<u8>(val & 0x00FF); \
@@ -113,7 +115,8 @@ public:
 		} \
 		constexpr void hl##suffix(u16 val) { hl(val expr 1); }
 
-		REGISTER16(a, f); // low byte is normally undefined, but pop af needs to function
+		// low byte is normally undefined, but pop af needs to function
+		U16GETTERS(a, f);
 		REGISTER16(b, c);
 		REGISTER16(d, e);
 		REGISTER16(h, l);
@@ -127,7 +130,12 @@ public:
 		// Implementation requires a callable getter/setter for sp.
 		constexpr u16 spGet() const { return sp; }
 		constexpr void spSet(u16 val) { sp = val; }
-#pragma endregion
+
+		// Special implementation for af setter
+		constexpr void af(u16 val) {
+			a = static_cast<u8>((val & 0xFF00) >> 8);
+			f = 0;
+		}
 	};
 
 // --- Vars ---

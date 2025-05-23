@@ -88,7 +88,6 @@ u16 Context::PopStack() {
 	const byte hi = _memory[reg.sp++];
 	MCycle();
 
-	// TODO: handle af?
 	return (hi << 8) | lo;
 }
 

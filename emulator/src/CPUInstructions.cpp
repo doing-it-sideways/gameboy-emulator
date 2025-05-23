@@ -74,7 +74,7 @@ struct R8Reg {
 		return *this;
 	}
 
-	constexpr R8Reg& operator=(R8Reg& other) { return operator=(other.reg); }
+	constexpr R8Reg& operator=(const R8Reg& other) { return operator=(other.reg); }
 
 	// postfix operators not supported
 	constexpr R8Reg& operator++() { return operator=(reg + 1); }
@@ -89,6 +89,12 @@ struct R8Reg {
 	constexpr byte operator^(byte val) { return reg ^ val; }
 	constexpr byte operator<<(byte val) { return reg << val; }
 	constexpr byte operator>>(byte val) { return reg >> val; }
+
+	constexpr byte& operator&=(byte val) { reg = reg & val; return reg; }
+	constexpr byte& operator|=(byte val) { reg = reg | val; return reg; }
+	constexpr byte& operator^=(byte val) { reg = reg ^ val; return reg; }
+	constexpr byte& operator<<=(byte val) { reg = reg << val; return reg; }
+	constexpr byte& operator>>=(byte val) { reg = reg >> val; return reg; }
 
 	constexpr friend byte operator+(byte a, R8Reg& b) { return a + b.reg; }
 	constexpr friend byte operator-(byte a, R8Reg& b) { return a - b.reg; }
@@ -187,7 +193,7 @@ constexpr static Addr16MemGetter R16Mem_GetFromBits(byte val) {
 }
 
 // Transforms a value [0, 3] into a function pointer to a 16-bit register getter (stack).
-constexpr static Addr16Getter R16Stk_GetFromBits(byte val) {
+constexpr static Addr16Setter R16Stk_SetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
 
@@ -201,7 +207,7 @@ constexpr static Addr16Getter R16Stk_GetFromBits(byte val) {
 }
 
 // Transforms a value [0, 3] into a function pointer to a 16-bit register getter (stack).
-constexpr static Addr16Setter R16Stk_SetFromBits(byte val) {
+constexpr static Addr16Getter R16Stk_GetFromBits(byte val) {
 	assert(val < 4);
 	using rf = Context::RegisterFile;
 
@@ -789,12 +795,12 @@ INSTR rlca(Context& cpu, Memory& mem) {
 
 	cpu.reg.a = std::rotl(cpu.reg.a, 1);
 
-	cpu.reg.f.SetAllBool(0, 0, 0, cpu.reg.a & 0b10000000);
+	cpu.reg.f.SetAllBool(0, 0, 0, cpu.reg.a & 1);
 	/*auto& flags = cpu.reg.f;
 	flags.Zero = 0;
 	flags.Subtract = 0;
 	flags.HalfCarry = 0;
-	flags.Carry = (cpu.reg.a & 0b10000000) ? 1 : 0;*/
+	flags.Carry = (cpu.reg.a & 1) ? 1 : 0;*/
 }
 
 INSTR rrca(Context& cpu, Memory& mem) {
@@ -808,17 +814,19 @@ INSTR rrca(Context& cpu, Memory& mem) {
 INSTR rla(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 	
-	cpu.reg.a = std::rotl(cpu.reg.a & 0b01111111u, 1);
+	bool carry = cpu.reg.a & 0b10000000;
+	cpu.reg.a = (cpu.reg.a << 1) | cpu.reg.f.Carry;
 
-	cpu.reg.f.SetAllBool(0, 0, 0, cpu.reg.a & 0b10000000);
+	cpu.reg.f.SetAllBool(0, 0, 0, carry);
 }
 
 INSTR rra(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	cpu.reg.a = std::rotr(cpu.reg.a & 0b11111110u, 1);
+	bool carry = cpu.reg.a & 1;
+	cpu.reg.a = (cpu.reg.a >> 1) | (cpu.reg.f.Carry << 7);
 
-	cpu.reg.f.SetAllBool(0, 0, 0, cpu.reg.a & 0b1);
+	cpu.reg.f.SetAllBool(0, 0, 0, carry);
 }
 #pragma endregion rotate, shift, bit manipulation
 
@@ -943,51 +951,95 @@ INSTR ei(Context& cpu, Memory& mem) {
 	NOIMPL();
 }
 #pragma endregion interrupt / halt related
-
 #pragma endregion non-prefixed instructions
 
 #pragma region prefixed (cb) instructions
-INSTR cb_rlc_r8(Context& cpu, Memory&) {
+INSTR cb_rlc_r8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00000'111);
+
+	reg = std::rotl(reg.reg, 1);
+	cpu.reg.f.SetAllBool(reg == 0, 0, 0, reg & 1);
+}
+
+INSTR cb_rrc_r8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00000'111);
+
+	reg = std::rotr(reg.reg, 1);
+	cpu.reg.f.SetAllBool(0, 0, 0, reg & 0b10000000);
+}
+
+INSTR cb_rl_r8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00000'111);
+
+	bool carry = reg & 0b10000000;
+	reg = (reg << 1) | cpu.reg.f.Carry;
+
+	cpu.reg.f.SetAllBool(reg == 0, 0, 0, carry);
+}
+
+INSTR cb_rr_r8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00000'111);
+
+	bool carry = reg & 1;
+	reg = (reg >> 1) | (cpu.reg.f.Carry << 7);
+
+	cpu.reg.f.SetAllBool(reg == 0, 0, 0, carry);
+}
+
+INSTR cb_sla_r8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00000'111);
+
+	bool carry = reg & 0b10000000;
+	reg <<= 1;
+
+	cpu.reg.f.SetAllBool(reg == 0, 0, 0, carry);
+}
+
+INSTR cb_sra_r8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00000'111);
+
+	bool carry = reg & 1;
+	reg = static_cast<sbyte>(reg.reg) >> 1;
+
+	cpu.reg.f.SetAllBool(reg == 0, 0, 0, carry);
+}
+
+INSTR cb_swap_r8(Context& cpu, Memory& mem) {
+	PRINTFUNC();
+
+	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00000'111);
+
+	reg = std::rotl(reg.reg, 4);
+	cpu.reg.f.SetAllBool(reg == 0, 0, 0, 0);
+}
+
+INSTR cb_srl_r8(Context& cpu, Memory& mem) {
+	NOIMPL();
+
+	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00000'111);
+}
+
+INSTR cb_bit_b3_r8(Context& cpu, Memory& mem) {
 	NOIMPL();
 }
 
-INSTR cb_rrc_r8(Context& cpu, Memory&) {
+INSTR cb_res_b3_r8(Context& cpu, Memory& mem) {
 	NOIMPL();
 }
 
-INSTR cb_rl_r8(Context& cpu, Memory&) {
-	NOIMPL();
-}
-
-INSTR cb_rr_r8(Context& cpu, Memory&) {
-	NOIMPL();
-}
-
-INSTR cb_sla_r8(Context& cpu, Memory&) {
-	NOIMPL();
-}
-
-INSTR cb_sra_r8(Context& cpu, Memory&) {
-	NOIMPL();
-}
-
-INSTR cb_swap_r8(Context& cpu, Memory&) {
-	NOIMPL();
-}
-
-INSTR cb_srl_r8(Context& cpu, Memory&) {
-	NOIMPL();
-}
-
-INSTR cb_bit_b3_r8(Context& cpu, Memory&) {
-	NOIMPL();
-}
-
-INSTR cb_res_b3_r8(Context& cpu, Memory&) {
-	NOIMPL();
-}
-
-INSTR cb_set_b3_r8(Context& cpu, Memory&) {
+INSTR cb_set_b3_r8(Context& cpu, Memory& mem) {
 	NOIMPL();
 }
 #pragma endregion prefixed (cb) instructions
@@ -1139,6 +1191,9 @@ INSTR cb_prefix(Context& cpu, Memory& mem) {
 		cpu.Hang();
 		return;
 	}
+
+	debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+						  cpu.ir, cpu.ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
 
 	auto handler = it->handler;
 	handler(cpu, mem);

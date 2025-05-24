@@ -931,6 +931,7 @@ INSTR rst_tgt3(Context& cpu, Memory& mem) {
 	cpu.PushStack(cpu.reg.pc);
 
 	byte rstAddr = (cpu.ir & 0b00'111'000) >> 3;
+	cpu.reg.pc = rstAddr;
 }
 #pragma endregion control flow instructions
 

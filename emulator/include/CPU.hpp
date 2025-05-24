@@ -85,6 +85,19 @@ public:
 		}
 	};
 
+	struct InterruptFlags {
+		byte : 3; // unused
+		byte Joypad : 1;
+		byte Serial : 1;
+		byte Timer : 1;
+		byte LCD : 1;
+		byte VBlank : 1;
+
+		constexpr operator byte() const { 
+			return Joypad << 4 | Serial << 3 | Timer << 2 | LCD << 1 | VBlank;
+		}
+	};
+
 	struct RegisterFile {
 		u16 pc;
 		u16 sp;
@@ -145,8 +158,8 @@ public:
 	// Instruction register -- This holds the current op code
 	byte ir;
 
-	// Interrupt enable flag (technically write only)
-	bool ime;
+	// Interrupt flag request.
+	InterruptFlags ieReq{};
 
 // --- Functions ---
 public:
@@ -168,6 +181,9 @@ public:
 	void Halt();
 	void Hang();
 
+	void EnableInterrupts();
+	void DisableInterrupts();
+
 #ifdef DEBUG
 	// Dumps current state of the cpu to console or a file
 	void Dump() const;
@@ -182,6 +198,8 @@ private:
 	// Execute instruction from op code.
 	bool Exec();
 
+	void InterruptHandler();
+
 // --- Vars ---
 private:
 	Memory& _memory;
@@ -190,11 +208,18 @@ private:
 	u64 _mCycles = 0;
 
 	// Next instruction to be executed.
-	InstrFunc _handler;
+	InstrFunc _handler = nullptr;
 
-	byte _interruptFlags;
+	// Interrupt enable register
+	InterruptFlags _ie{};
 
 	bool _isHalted = false;
+
+	// Interrupt enable flag
+	bool _ime = false;
+
+	// IME interrupt enable needs to happen one update apart from actual interrupt handling
+	bool _enablingIME = false;
 };
 
 /*

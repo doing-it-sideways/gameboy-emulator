@@ -11,7 +11,6 @@ Context::Context(Memory& memory)
 		   .a = 0x01, .f = { 1, 0, 1, 1 },
 		   .c = 0x13, .d = 0, .e = 0xD8, .h = 0x01, .l = 0x4D }
 	, ir(memory[0x0100])
-	, ie(0x00)
 	, _memory(memory)
 {
 	// TODO
@@ -19,7 +18,12 @@ Context::Context(Memory& memory)
 
 bool Context::Update() {
 	if (_isHalted) {
-		// TODO: handle halt and resumtion to normal execution
+		MCycle();
+
+		// cpu wakes when bitwise and of ie and if != 0
+		// TODO: implement halt bug (gbdev 9.2)
+		if (_ie & ieReq)
+			_isHalted = false;
 	}
 	else {
 #if defined(DEBUG) && defined(TESTS)
@@ -38,7 +42,18 @@ bool Context::Update() {
 		}
 	}
 
+	if (_ime)
+		InterruptHandler();
+	else if (_enablingIME) {
+		_ime = true;
+		_enablingIME = false;
+	}
+
 	return true;
+}
+
+void Context::InterruptHandler() {
+
 }
 
 void Context::Inc(u16 reg16) {
@@ -109,6 +124,15 @@ void Context::Hang() {
 	_handler = nullptr;
 }
 
+void Context::EnableInterrupts() {
+	_enablingIME = true;
+}
+
+void Context::DisableInterrupts() {
+	_enablingIME = false;
+	_ime = false;
+}
+
 void Context::Dump() const {
 	debug::cexpr::println("\n---Current CPU State---");
 	byte data = _memory[reg.pc];
@@ -116,7 +140,7 @@ void Context::Dump() const {
 	debug::cexpr::println("flags: {:04b}", reg.f >> 4);
 	debug::cexpr::println("registers: a: {:#04x}, bc: {:#06x}, de: {:#06x}, hl: {:#06x}",
 				 reg.a, reg.bc(), reg.de(), reg.hl());
-	debug::cexpr::println("ir: {:#010b}\tie: {:#010b}\n", ir, ie);
+	debug::cexpr::println("ir: {:#010b}\tie: {:#010b}\n", ir, _ie);
 }
 
 } // namespace gb::cpu

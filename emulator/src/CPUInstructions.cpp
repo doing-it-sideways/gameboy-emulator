@@ -895,13 +895,13 @@ INSTR halt(Context& cpu, Memory& mem) {
 INSTR di(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	cpu.ime = false;
+	cpu.DisableInterrupts();
 }
 
 INSTR ei(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	cpu.ime = true;
+	cpu.EnableInterrupts();
 }
 #pragma endregion interrupt / halt related
 #pragma endregion non-prefixed instructions

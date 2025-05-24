@@ -80,15 +80,15 @@ struct R8Reg {
 	constexpr R8Reg& operator++() { return operator=(reg + 1); }
 	constexpr R8Reg& operator--() { return operator=(reg - 1); }
 
-	constexpr bool operator==(byte val) { return reg == val; }
+	constexpr bool operator==(byte val) const { return reg == val; }
 
-	constexpr byte operator+(byte val) { return reg + val; }
-	constexpr byte operator-(byte val) { return reg - val; }
-	constexpr byte operator&(byte val) { return reg & val; }
-	constexpr byte operator|(byte val) { return reg | val; }
-	constexpr byte operator^(byte val) { return reg ^ val; }
-	constexpr byte operator<<(byte val) { return reg << val; }
-	constexpr byte operator>>(byte val) { return reg >> val; }
+	constexpr byte operator+(byte val) const { return reg + val; }
+	constexpr byte operator-(byte val) const { return reg - val; }
+	constexpr byte operator&(byte val) const { return reg & val; }
+	constexpr byte operator|(byte val) const { return reg | val; }
+	constexpr byte operator^(byte val) const { return reg ^ val; }
+	constexpr byte operator<<(byte val) const { return reg << val; }
+	constexpr byte operator>>(byte val) const { return reg >> val; }
 
 	constexpr byte& operator&=(byte val) { reg = reg & val; return reg; }
 	constexpr byte& operator|=(byte val) { reg = reg | val; return reg; }
@@ -96,13 +96,13 @@ struct R8Reg {
 	constexpr byte& operator<<=(byte val) { reg = reg << val; return reg; }
 	constexpr byte& operator>>=(byte val) { reg = reg >> val; return reg; }
 
-	constexpr friend byte operator+(byte a, R8Reg& b) { return a + b.reg; }
-	constexpr friend byte operator-(byte a, R8Reg& b) { return a - b.reg; }
-	constexpr friend byte operator&(byte a, R8Reg& b) { return a & b.reg; }
-	constexpr friend byte operator|(byte a, R8Reg& b) { return a | b.reg; }
-	constexpr friend byte operator^(byte a, R8Reg& b) { return a ^ b.reg; }
-	constexpr friend byte operator<<(byte a, R8Reg& b) { return a >> b.reg; }
-	constexpr friend byte operator>>(byte a, R8Reg& b) { return a << b.reg; }
+	constexpr friend byte operator+(byte a, const R8Reg& b) { return a + b.reg; }
+	constexpr friend byte operator-(byte a, const R8Reg& b) { return a - b.reg; }
+	constexpr friend byte operator&(byte a, const R8Reg& b) { return a & b.reg; }
+	constexpr friend byte operator|(byte a, const R8Reg& b) { return a | b.reg; }
+	constexpr friend byte operator^(byte a, const R8Reg& b) { return a ^ b.reg; }
+	constexpr friend byte operator<<(byte a, const R8Reg& b) { return a >> b.reg; }
+	constexpr friend byte operator>>(byte a, const R8Reg& b) { return a << b.reg; }
 
 	constexpr friend byte& operator&=(byte& a, R8Reg& b) { a &= b.reg; return a; }
 	constexpr friend byte& operator|=(byte& a, R8Reg& b) { a |= b.reg; return a; }
@@ -229,11 +229,8 @@ constexpr static bool FlagCond(Context::Flags flags, byte val) {
 	case 1: return static_cast<bool>(flags.Zero);	// Z
 	case 2: return !static_cast<bool>(flags.Carry);	// NC
 	case 3: return static_cast<bool>(flags.Carry);	// C
-	default: break;
+	default: std::unreachable();
 	}
-
-	debug::cexpr::println(stderr, "Unknown condition check: {:#04b}", val);
-	return false;
 }
 
 constexpr static void SetFlagsIfAOrZero(Context& cpu, byte flagVal) {
@@ -1038,15 +1035,30 @@ INSTR cb_srl_r8(Context& cpu, Memory& mem) {
 }
 
 INSTR cb_bit_b3_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	const R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00'000'111);
+	const byte bitNum = cpu.ir & 0b00'111'000;
+
+	cpu.reg.f.SetAllBool(!(reg & (1 << bitNum)), 0, 1, cpu.reg.f.Carry);
 }
 
 INSTR cb_res_b3_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00'000'111);
+	const byte bitNum = cpu.ir & 0b00'111'000;
+
+	reg &= ~(1 << bitNum);
 }
 
 INSTR cb_set_b3_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00'000'111);
+	const byte bitNum = cpu.ir & 0b00'111'000;
+
+	reg |= 1 << bitNum;
 }
 #pragma endregion prefixed (cb) instructions
 
@@ -1162,7 +1174,6 @@ static constexpr auto InvalidInstrs = std::to_array<byte>(
 {
 	0xD3, 0xDB, 0xDD, 0xE3, 0xE4, 0xEB, 0xEC, 0xED, 0xF4, 0xFC, 0xFD
 });
-
 
 // Uses cbInstrMap, similar to Context::Fetch but just for cb prefixed instructions.
 INSTR cb_prefix(Context& cpu, Memory& mem) {

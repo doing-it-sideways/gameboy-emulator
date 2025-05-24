@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS false)
 
 option(ENABLE_TESTS "Enable gameboy emulator tests" ON)
 
-set(WITH_TESTS OFF CACHE BOOL "broken option thanks :thumbs_up:" FORCE)
+set(WITH_TESTS OFF CACHE BOOL "broken option thanks :thumbs_gup:" FORCE)
 add_subdirectory(external/eternal)
 
 add_subdirectory(graphics)

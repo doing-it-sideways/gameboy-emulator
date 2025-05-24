@@ -145,8 +145,8 @@ public:
 	// Instruction register -- This holds the current op code
 	byte ir;
 
-	// Interrupt enable register
-	byte ie;
+	// Interrupt enable flag (technically write only)
+	bool ime;
 
 // --- Functions ---
 public:
@@ -165,6 +165,7 @@ public:
 
 	void MCycle(u8 cycles = 1);
 
+	void Halt();
 	void Hang();
 
 #ifdef DEBUG
@@ -191,7 +192,8 @@ private:
 	// Next instruction to be executed.
 	InstrFunc _handler;
 
-	// See halt op code to understand behavior
+	byte _interruptFlags;
+
 	bool _isHalted = false;
 };
 

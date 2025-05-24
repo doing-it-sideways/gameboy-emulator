@@ -98,6 +98,10 @@ void Context::MCycle(u8 cycles) {
 	_mCycles += cycles;
 }
 
+void Context::Halt() {
+	_isHalted = true;
+}
+
 void Context::Hang() {
 	// TODO: hang cpu
 	debug::cexpr::println(stderr, "CPU should hang");

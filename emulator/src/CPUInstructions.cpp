@@ -1026,9 +1026,14 @@ INSTR cb_swap_r8(Context& cpu, Memory& mem) {
 }
 
 INSTR cb_srl_r8(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
 
 	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00000'111);
+
+	bool carry = reg & 1;
+	reg >>= 1;
+
+	cpu.reg.f.SetAllBool(reg == 0, 0, 0, carry);
 }
 
 INSTR cb_bit_b3_r8(Context& cpu, Memory& mem) {

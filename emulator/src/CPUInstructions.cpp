@@ -1062,7 +1062,6 @@ INSTR cb_set_b3_r8(Context& cpu, Memory& mem) {
 }
 #pragma endregion prefixed (cb) instructions
 
-using InstrPair = std::pair<OpCode, Context::InstrFunc>; // shorthand
 #define INSTRMAP(x) { OpCode::##x, &x }
 
 // Contains the mapping of op code -> handler.

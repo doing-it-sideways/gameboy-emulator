@@ -867,7 +867,7 @@ INSTR reti(Context& cpu, Memory& mem) {
 	u16 retAddr = cpu.PopStack();
 
 	cpu.reg.pc = retAddr;
-	cpu.ime = true;
+	cpu.EnableInterrupts();
 	cpu.MCycle();
 }
 

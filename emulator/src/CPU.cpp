@@ -74,6 +74,8 @@ void Context::Dec(u16 reg16) {
 }
 
 void Context::PushStack(u16 value) {
+	MCycle(); // sp - 1
+
 	_memory[--reg.sp] = (value & 0xFF00) >> 8;
 	MCycle();
 

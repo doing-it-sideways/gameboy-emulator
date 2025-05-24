@@ -140,7 +140,7 @@ void Context::Dump() const {
 	debug::cexpr::println("flags: {:04b}", reg.f >> 4);
 	debug::cexpr::println("registers: a: {:#04x}, bc: {:#06x}, de: {:#06x}, hl: {:#06x}",
 				 reg.a, reg.bc(), reg.de(), reg.hl());
-	debug::cexpr::println("ir: {:#010b}\tie: {:#010b}\n", ir, _ie);
+	debug::cexpr::println("ir: {:#010b}\tie: {:#010b}\n", ir, static_cast<byte>(_ie));
 }
 
 } // namespace gb::cpu

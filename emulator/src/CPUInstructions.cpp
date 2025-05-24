@@ -862,7 +862,13 @@ INSTR ret_cond(Context& cpu, [[maybe_unused]] Memory&) {
 }
 
 INSTR reti(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	u16 retAddr = cpu.PopStack();
+
+	cpu.reg.pc = retAddr;
+	cpu.ime = true;
+	cpu.MCycle();
 }
 
 INSTR rst_tgt3(Context& cpu, [[maybe_unused]] Memory&) {
@@ -881,15 +887,21 @@ INSTR stop(Context& cpu, Memory& mem) {
 }
 
 INSTR halt(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	cpu.Halt();
 }
 
 INSTR di(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	cpu.ime = false;
 }
 
 INSTR ei(Context& cpu, Memory& mem) {
-	NOIMPL();
+	PRINTFUNC();
+
+	cpu.ime = true;
 }
 #pragma endregion interrupt / halt related
 #pragma endregion non-prefixed instructions

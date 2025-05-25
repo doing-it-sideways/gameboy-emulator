@@ -42,8 +42,10 @@ bool Context::Update() {
 		}
 	}
 
-	if (_ime)
+	if (_ime) {
+		_ie = static_cast<InterruptFlags>(_memory.GetIE());
 		InterruptHandler();
+	}
 	else if (_enablingIME) {
 		_ime = true;
 		_enablingIME = false;
@@ -53,7 +55,21 @@ bool Context::Update() {
 }
 
 void Context::InterruptHandler() {
+	MCycle(1); // simulate "2" nops. second nop happens at top of PushStack
+	PushStack(reg.pc);
 
+	for (byte interrupt = 1; interrupt <= 1 << 4; interrupt <<= 1) {
+		if (_ie & interrupt && ieReq & interrupt) {
+			_ime = false;
+
+			reg.pc = 0x40 + (interrupt * 8);
+			ieReq = static_cast<byte>(ieReq) & ~interrupt;
+
+			MCycle();
+
+			return; // only handle one interrupt at a time
+		}
+	}
 }
 
 void Context::Inc(u16 reg16) {
@@ -115,6 +131,7 @@ void Context::MCycle(u8 cycles) {
 
 void Context::Halt() {
 	_isHalted = true;
+	--reg.pc; // IR doesn't increment on halt
 }
 
 void Context::Hang() {
@@ -122,6 +139,7 @@ void Context::Hang() {
 	debug::cexpr::println(stderr, "CPU should hang");
 
 	_handler = nullptr;
+	BREAKPOINT;
 }
 
 void Context::EnableInterrupts() {

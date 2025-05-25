@@ -69,10 +69,10 @@ public:
 		}
 
 		constexpr Flags& operator=(byte b) {
-			Zero = b & (1 << 7) ? 1 : 0;
-			Subtract = b & (1 << 6) ? 1 : 0;
-			HalfCarry = b & (1 << 5) ? 1 : 0;
-			Carry = b & (1 << 4) ? 1 : 0;
+			Zero = b & (1 << 7);
+			Subtract = b & (1 << 6);
+			HalfCarry = b & (1 << 5);
+			Carry = b & (1 << 4);
 
 			return *this;
 		}
@@ -95,6 +95,16 @@ public:
 
 		constexpr operator byte() const { 
 			return Joypad << 4 | Serial << 3 | Timer << 2 | LCD << 1 | VBlank;
+		}
+
+		constexpr InterruptFlags& operator=(byte b) {
+			Joypad = b & (1 << 4);
+			Serial = b & (1 << 3);
+			Timer = b & (1 << 2);
+			LCD = b & (1 << 1);
+			VBlank = b & 1;
+
+			return *this;
 		}
 	};
 

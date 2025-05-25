@@ -58,7 +58,8 @@ void Context::InterruptHandler() {
 	MCycle(1); // simulate "2" nops. second nop happens at top of PushStack
 	PushStack(reg.pc);
 
-	for (byte interrupt = 1; interrupt <= 1 << 4; interrupt <<= 1) {
+	// TODO: NMI (0x80) is 2nd highest priority after bugged interrupt (0x00)
+	for (byte interrupt = 0; interrupt <= 1 << 4; interrupt <<= 1) {
 		if (_ie & interrupt && ieReq & interrupt) {
 			_ime = false;
 

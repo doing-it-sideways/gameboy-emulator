@@ -59,11 +59,11 @@ void Context::InterruptHandler() {
 	PushStack(reg.pc);
 
 	// TODO: NMI (0x80) is 2nd highest priority after bugged interrupt (0x00)
-	for (byte interrupt = 0; interrupt <= 1 << 4; interrupt <<= 1) {
+	for (byte i = 0, interrupt = 1; i < 5; ++i, interrupt <<= 1) {
 		if (_ie & interrupt && ieReq & interrupt) {
 			_ime = false;
 
-			reg.pc = 0x40 + (interrupt * 8);
+			reg.pc = 0x40 + (i * 8);
 			ieReq = static_cast<byte>(ieReq) & ~interrupt;
 
 			MCycle();

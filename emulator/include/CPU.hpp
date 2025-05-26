@@ -332,7 +332,7 @@ enum class OpCode : byte {
 					// https://gbdev.io/pandocs/Reducing_Power_Consumption.html#using-the-stop-instruction
 					// or https://gist.github.com/SonoSooS/c0055300670d678b5ae8433e20bea595#nop-and-stop
 	halt =				0b01110110,		// enter cpu low-power mode until interrupt occurs.
-										//see: https://rgbds.gbdev.io/docs/v0.9.1/gbz80.7#HALT
+										// see: https://rgbds.gbdev.io/docs/v0.9.1/gbz80.7#HALT
 										// note: ld [hl], [hl] will yield the halt instruction
 	di =				0b11110011,		// disable interrupts
 	ei =				0b11111011,		// enable interrupts

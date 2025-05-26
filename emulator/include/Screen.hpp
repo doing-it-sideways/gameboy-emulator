@@ -1,6 +1,9 @@
 #pragma once
 
 #include <GLBuffers.hpp>
+#include <GLFW/glfw3.h>
+
+#include <memory>
 
 namespace gb {
 
@@ -26,7 +29,7 @@ public:
 
 private:
 	GLFWwindow* _window = nullptr;
-	cyber::FrameBuffer _fbo{};
+	std::unique_ptr<cyber::FrameBuffer> _fbo{};
 };
 
 } // namespace gb

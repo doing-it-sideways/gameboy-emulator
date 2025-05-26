@@ -7,6 +7,8 @@
 #include "CPU.hpp"
 #include "PPU.hpp"
 
+#include "Screen.hpp"
+
 namespace gb {
 
 class Emu {
@@ -28,6 +30,8 @@ private:
 
 	cpu::Context _cpuCtx;
 	ppu::GContext _ppuCtx;
+
+	Screen _screen{};
 
 	bool _isRunning = false;
 	bool _isPaused = false;

@@ -18,7 +18,7 @@ target_include_directories(${EMU_LIB}
     PRIVATE ../external/eternal/include
 )
 
-target_link_libraries(${EMU_LIB} PRIVATE graphicslib)
+target_link_libraries(${EMU_LIB} PUBLIC graphicslib)
 
 if (MSVC)
     target_compile_options(${EMU_LIB} PUBLIC /Zi)

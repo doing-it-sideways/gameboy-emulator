@@ -1,10 +1,9 @@
-#include <glad/gl.h>
+#include "Screen.hpp"
+
 #include <GLFW/glfw3.h>
 #include <stdexcept>
 
 #include <Error.hpp>
-
-#include "Screen.hpp"
 
 namespace gb {
 
@@ -41,16 +40,17 @@ Screen::Screen()
 	}
 
 #ifdef DEBUG
-	glfwSetErrorCallback(GLFWErrorCallback);
+	//glfwSetErrorCallback(GLFWErrorCallback);
 
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	glDebugMessageCallback(GLErrorCallback, nullptr);
+	//glDebugMessageCallback(GLErrorCallback, nullptr);
 #endif
 
-	_fbo.AddTextureAttachment(GL_COLOR_ATTACHMENT0, winWidth, winHeight);
+	_fbo = std::make_unique<cyber::FrameBuffer>();
+	_fbo->AddTextureAttachment(GL_COLOR_ATTACHMENT0, winWidth, winHeight);
 
-	if (!_fbo.CheckComplete()) {
+	if (!_fbo->CheckComplete()) {
 		glfwTerminate();
 		throw std::runtime_error{ "Unable to setup framebuffer." };
 	}

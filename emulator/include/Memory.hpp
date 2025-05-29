@@ -1,12 +1,14 @@
 #pragma once
 
 #include <array>
+#include <tuple>
 #include <memory>
 #include <vector>
 
 #include "Core.hpp"
 #include "MapperChipInfo.hpp"
 #include "ROM.hpp"
+#include "HardwareRegisters.hpp"
 
 namespace gb {
 
@@ -26,7 +28,7 @@ public:
 
 	std::vector<byte> Dump() const; // TODO
 
-	inline byte GetIE() const { return _ie; }
+	inline auto GetInterruptReg() { return std::tie(_io.ie, _io.iF); }
 
 private:
 	// Allows operator[] to work properly
@@ -49,8 +51,9 @@ private:
 private:	
 	std::array<byte, 0x1800> _vram{};	// video ram
 	std::array<byte, 0x80> _hram{};		// high ram / zero page.
-	byte _ie = 0;						// Interrupt enable flag
-
+	
+	HWRegs _io;
+	
 	rom::RomData _romData;			// cartridge rom
 	std::vector<byte> _ramInternal; // no gbc support yet, size always 0x2000
 

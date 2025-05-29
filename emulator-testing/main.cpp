@@ -1,10 +1,10 @@
+#if defined(DEBUG) && defined(TESTS)
 #include <print>
 #include <string_view>
 
 #include "Core.hpp"
 #include "Emulator.hpp"
 
-#ifdef DEBUG
 #include <array>
 #include <charconv>
 #include <filesystem>
@@ -15,18 +15,13 @@ static int TestMain(int argc, char** argv);
 static int RunTests(bool step = false);
 static inline int RunTest(std::size_t testNum, bool step = false);
 static int RunTest(const std::filesystem::path& test, bool step = false);
-#endif
 
 int main(int argc, char** argv) {
 	using namespace gb;
 
-#if defined(DEBUG) && defined(TESTS)
-	auto simulatedArgs = std::to_array<const char*>({ "", "19", "step" });
+	auto simulatedArgs = std::to_array<const char*>({ "", "16" });//, "step" });
 	return TestMain(simulatedArgs.size(), const_cast<char**>(simulatedArgs.data()));
-#endif // DEBUG
 }
-
-#ifdef DEBUG
 
 static const std::filesystem::path testPath = TESTPATH;
 
@@ -135,11 +130,36 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 				break;
 		}
 	}
-	else
-		emu.Run();
+	else {
+		emu.Start();
+		emu.SetDump(false);
+
+		std::string debugStr{};
+		auto& mem = emu.DebugMemory();
+
+		// printing blargg tests
+		while (emu.Update()) {
+			if (mem[0xFF02] == 0x81) {
+				debugStr.push_back(static_cast<char>(mem[0xFF01]));
+				mem[0xFF02] = 0;
+
+				std::println("-----Blargg Test Message-----\n{}\n---------------", debugStr);
+				
+				if (debugStr.size() > 0)
+					std::print("");
+			}
+		}
+	}
 
 	// TODO
 	return 0;
 }
 
-#endif // DEBUG
+#else // DEBUG && TESTS
+#include <print>
+
+int main() {
+	std::println(stderr, "DEBUG and TEST macros must be enabled.");
+	return -1;
+}
+#endif // DEBUG && TESTS

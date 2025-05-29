@@ -1163,8 +1163,9 @@ INSTR cb_prefix(Context& cpu, Memory& mem) {
 		return;
 	}
 
-	debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
-						  cpu.ir, cpu.ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
+	if (cpu.canDump)
+		debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+							cpu.ir, cpu.ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
 
 	auto handler = it->handler;
 	handler(cpu, mem);
@@ -1189,8 +1190,9 @@ bool Context::Fetch() {
 
 	// First, check if it's a non-variable instruction
 	if (auto it = constInstrMap.find(opCode); it != constInstrMap.end()) {
-		debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
-							  ir, ir, static_cast<byte>(it->first), static_cast<byte>(it->first));
+		if (canDump)
+			debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+								ir, ir, static_cast<byte>(it->first), static_cast<byte>(it->first));
 
 		_handler = it->second;
 		return true;
@@ -1223,8 +1225,9 @@ bool Context::Fetch() {
 		return false;
 	}
 
-	debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
-						  ir, ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
+	if (canDump)
+		debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+							ir, ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
 	// Store a function pointer rather than updating the ir
 	// because some instructions have variable op codes. The ir still holds the bits
 	// to determine what register / data / condition needs to be used.

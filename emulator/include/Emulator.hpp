@@ -16,7 +16,7 @@ public:
 	explicit Emu(const std::filesystem::path& romPath);
 
 	// For stepping through instead of running
-	constexpr void Start() { _isRunning = true; }
+	void Start() { _isRunning = true; }
 
 	// Handles the update loop itself.
 	void Run();
@@ -24,6 +24,11 @@ public:
 	// Update "loop".
 	// Is public so the cpu can be easily stepped through from outside the class.
 	bool Update();
+
+#if defined(DEBUG) && defined(TESTS)
+	constexpr auto&& DebugMemory() noexcept { return _memory; }
+	constexpr void SetDump(bool dump) noexcept { _cpuCtx.canDump = dump; }
+#endif
 
 private:
 	Memory _memory;

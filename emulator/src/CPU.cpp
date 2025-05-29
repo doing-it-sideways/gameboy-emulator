@@ -20,14 +20,16 @@ bool Context::Update() {
 	if (_isHalted) {
 		MCycle();
 
+		auto [ie, ieReq] = _memory.GetInterruptReg();
 		// cpu wakes when bitwise and of ie and if != 0
 		// TODO: implement halt bug (gbdev 9.2)
-		if (_ie & ieReq)
+		if (ie & ieReq)
 			_isHalted = false;
 	}
 	else {
-#if defined(DEBUG) && defined(TESTS)
-		Dump(); // print current state of cpu
+#if defined(DEBUG)
+		if (canDump)
+			Dump(); // print current state of cpu
 #endif
 
 		// fetch and execute overlap on the SM83.
@@ -43,7 +45,6 @@ bool Context::Update() {
 	}
 
 	if (_ime) {
-		_ie = static_cast<InterruptFlags>(_memory.GetIE());
 		InterruptHandler();
 	}
 	else if (_enablingIME) {
@@ -59,12 +60,13 @@ void Context::InterruptHandler() {
 	PushStack(reg.pc);
 
 	// TODO: NMI (0x80) is 2nd highest priority after bugged interrupt (0x00)
+	auto [ie, iF] = _memory.GetInterruptReg();
 	for (byte i = 0, interrupt = 1; i < 5; ++i, interrupt <<= 1) {
-		if (_ie & interrupt && ieReq & interrupt) {
+		if (ie & interrupt && iF & interrupt) {
 			_ime = false;
 
 			reg.pc = 0x40 + (i * 8);
-			ieReq = static_cast<byte>(ieReq) & ~interrupt;
+			iF = static_cast<byte>(iF) & ~interrupt;
 
 			MCycle();
 
@@ -153,13 +155,15 @@ void Context::DisableInterrupts() {
 }
 
 void Context::Dump() const {
-	debug::cexpr::println("\n---Current CPU State---");
 	byte data = _memory[reg.pc];
+	auto [ie, _] = _memory.GetInterruptReg();
+
+	debug::cexpr::println("\n---Current CPU State---");
 	debug::cexpr::println("pc ({:#06x}): {:#04x}", reg.pc, data);
 	debug::cexpr::println("flags: {:04b}", reg.f >> 4);
 	debug::cexpr::println("registers: a: {:#04x}, bc: {:#06x}, de: {:#06x}, hl: {:#06x}",
 				 reg.a, reg.bc(), reg.de(), reg.hl());
-	debug::cexpr::println("ir: {:#010b}\tie: {:#010b}\n", ir, static_cast<byte>(_ie));
+	debug::cexpr::println("ir: {:#010b}\tie: {:#010b}\n", ir, static_cast<byte>(ie));
 }
 
 } // namespace gb::cpu

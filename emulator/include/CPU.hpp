@@ -85,29 +85,6 @@ public:
 		}
 	};
 
-	struct InterruptFlags {
-		byte : 3; // unused
-		byte Joypad : 1;
-		byte Serial : 1;
-		byte Timer : 1;
-		byte LCD : 1;
-		byte VBlank : 1;
-
-		constexpr operator byte() const { 
-			return Joypad << 4 | Serial << 3 | Timer << 2 | LCD << 1 | VBlank;
-		}
-
-		constexpr InterruptFlags& operator=(byte b) {
-			Joypad = b & (1 << 4);
-			Serial = b & (1 << 3);
-			Timer = b & (1 << 2);
-			LCD = b & (1 << 1);
-			VBlank = b & 1;
-
-			return *this;
-		}
-	};
-
 	struct RegisterFile {
 		u16 pc;
 		u16 sp;
@@ -168,8 +145,10 @@ public:
 	// Instruction register -- This holds the current op code
 	byte ir;
 
-	// Interrupt flag request.
-	InterruptFlags ieReq{};
+#ifdef DEBUG
+	// If the cpu should dump current state after each instruction
+	static inline bool canDump = true;
+#endif
 
 // --- Functions ---
 public:
@@ -219,9 +198,6 @@ private:
 
 	// Next instruction to be executed.
 	InstrFunc _handler = nullptr;
-
-	// Interrupt enable register
-	InterruptFlags _ie{};
 
 	bool _isHalted = false;
 

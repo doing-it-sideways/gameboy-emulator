@@ -1,3 +1,5 @@
+#include <chrono>
+#include <thread>
 #include <stdexcept>
 
 #include "Emulator.hpp"
@@ -23,7 +25,7 @@ Emu::Emu(const std::filesystem::path& romPath)
 void Emu::Run() {
 	_isRunning = true;
 
-	while (_isRunning) {
+	while (_isRunning && !_screen.IsClosed()) {
 		if (_isPaused) {
 			// TODO: add delay
 			continue;
@@ -33,14 +35,22 @@ void Emu::Run() {
 			debug::cexpr::println(stderr, "Something went wrong!");
 			return;
 		}
+
+		_screen.Update();
 	}
 }
 
 bool Emu::Update() {
+	if (_isPaused)
+		return true;
+
 	if (!_cpuCtx.Update())
 		return false;
 
-	return true;
+	if (_screen.IsClosed())
+		return false;
+	
+	return _screen.Update();
 }
 
 } // namespace gb

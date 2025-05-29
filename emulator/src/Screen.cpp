@@ -1,9 +1,18 @@
-#include "Screen.hpp"
-
-#include <GLFW/glfw3.h>
 #include <stdexcept>
+#include <utility>
 
 #include <Error.hpp>
+#include <GLFW/glfw3.h> // error includes gl.h
+
+#include "Screen.hpp"
+
+template <typename Func, typename... Params>
+static void HandleWindowCallback(GLFWwindow* glWindow, Func&& func, Params&&... params) {
+	auto* usrPtr = glfwGetWindowUserPointer(glWindow);
+
+	if (gb::Screen* screen = static_cast<gb::Screen*>(usrPtr))
+		std::invoke(std::forward<Func>(func), screen, std::forward<Params>(params)...);
+}
 
 namespace gb {
 
@@ -28,11 +37,24 @@ Screen::Screen()
 		throw std::runtime_error{ "Window couldn't be created." };
 	}
 
-	glfwMakeContextCurrent(_window);
+	glfwSetWindowSizeLimits(_window, scrWidth, scrHeight, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
-	auto mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+	const auto mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 	glfwSetWindowPos(_window, mode->width / 2 - winWidth / 2, mode->height / 2 - winHeight / 2);
 
+	glfwMakeContextCurrent(_window);
+	glfwSetWindowUserPointer(_window, this);
+
+	glfwSetWindowCloseCallback(_window, [](GLFWwindow* win) {
+		HandleWindowCallback(win, &Screen::OnClose);
+	});
+	glfwSetFramebufferSizeCallback(_window, [](GLFWwindow* win, int width, int height) {
+		HandleWindowCallback(win, &Screen::OnChangeRes, width, height);
+	});
+	glfwSetWindowFocusCallback(_window, [](GLFWwindow* win, int focused) {
+		HandleWindowCallback(win, &Screen::OnFocus, static_cast<bool>(focused));
+	});
+	
 	gladLoadGL(glfwGetProcAddress);
 	if (GLAD_GL_VERSION_4_6 == 0) {
 		glfwTerminate();
@@ -40,11 +62,11 @@ Screen::Screen()
 	}
 
 #ifdef DEBUG
-	//glfwSetErrorCallback(GLFWErrorCallback);
+	glfwSetErrorCallback(GLFWErrorCallback);
 
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	//glDebugMessageCallback(GLErrorCallback, nullptr);
+	glDebugMessageCallback(GLErrorCallback, nullptr);
 #endif
 
 	_fbo = std::make_unique<cyber::FrameBuffer>();
@@ -59,13 +81,31 @@ Screen::Screen()
 }
 
 Screen::~Screen() {
+	glfwDestroyWindow(_window);
 	glfwTerminate();
 }
 
 // TODO
 bool Screen::Update() {
+	if (glfwWindowShouldClose(_window))
+		return false;
+
+	glfwSwapBuffers(_window);
+	glfwPollEvents();
+
 	// glTexSubImage2D?
-	return false;
+	return true;
+}
+
+void Screen::OnChangeRes(int widthPixels, int heightPixels) {
+	if (glfwWindowShouldClose(_window))
+		return;
+
+	glViewport(0, 0, widthPixels, heightPixels);
+}
+
+void Screen::OnFocus(bool focused) {
+	// TODO
 }
 
 } // namespace gb

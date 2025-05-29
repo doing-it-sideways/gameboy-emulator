@@ -91,7 +91,8 @@ static std::unique_ptr<IMapperInfo> InitMapperChip(byte type, byte ramSizeCode) 
 }
 
 Memory::Memory(rom::RomData&& data)
-	: _romData(std::move(data))
+	: _io(HWRegs::InitRegs())
+	, _romData(std::move(data))
 	, _ramInternal(0x2000)
 	, _mapperChipData(InitMapperChip(_romData[0x0147], _romData[0x0149]))
 	, _mapperChip(GetMapperChipType(_romData[0x0147]))
@@ -133,15 +134,15 @@ byte& Memory::Read(u16 addr) {
 	}
 	// [$FF00, $FF7F]
 	else if (addr < ioEnd) {
-		// TODO
+		return _io.Read(addr);
 	}
 	// [$FF80, $FFFE]
 	else if (addr < hramEnd) {
 		return _hram[addr - 0xFF80];
 	}
-	// $FFFF -- regIE
+	// $FFFF
 	else {
-		return _ie;
+		return _io.ie.asByte;
 	}
 
 	debug::cexpr::println("Unimplemented or invalid memory access at {:#06x}", addr);
@@ -182,16 +183,17 @@ void Memory::Write(u16 addr, byte val) {
 	}
 	// [$FF00, $FF7F]
 	else if (addr < ioEnd) {
-		// TODO
+		_io.Write(addr, val);
+		return;
 	}
 	// [$FF80, $FFFE]
 	else if (addr < hramEnd) {
 		_hram[addr - 0xFF80] = val;
 		return;
 	}
-	// $FFFF -- interrupt enable register
+	// $FFFF
 	else {
-		_ie = val;
+		_io.ie = val;
 	}
 	
 	debug::cexpr::println("Unimplemented or invalid memory write at {:#06x}", addr);

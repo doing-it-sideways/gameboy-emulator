@@ -1,9 +1,10 @@
 #pragma once
 
 #include <GLBuffers.hpp>
-#include <GLFW/glfw3.h>
 
 #include <memory>
+
+struct GLFWwindow;
 
 namespace gb {
 
@@ -22,14 +23,24 @@ public:
 	Screen();
 	~Screen();
 	
-	constexpr Screen(Screen&&) = default;
-	constexpr Screen& operator=(Screen&&) = default;
+	Screen(Screen&&) = default;
+	Screen& operator=(Screen&&) = default;
 
 	bool Update();
+
+	inline bool IsClosed() const { return _isClosed; }
+	inline GLFWwindow* GetGLFWWindow() const { return _window; }
+
+private:
+	void OnFocus(bool focused);
+	void OnChangeRes(int widthPixels, int heightPixels);
+	inline void OnClose() { _isClosed = true; }
 
 private:
 	GLFWwindow* _window = nullptr;
 	std::unique_ptr<cyber::FrameBuffer> _fbo{};
+
+	bool _isClosed = false;
 };
 
 } // namespace gb

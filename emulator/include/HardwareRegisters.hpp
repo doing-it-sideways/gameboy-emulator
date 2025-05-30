@@ -22,13 +22,13 @@ struct HWRegs {
 // ----- Structs and Typedefs -----
 	BITFIELD_UNION_BYTE(SerialControl, flags,
 		byte TransferEnable : 1;
-		byte : 5; // unused
+		byte Unused : 5; // unused
 		byte ClockSpeed : 1;
 		byte ClockSelect : 1;
 	);
 
 	BITFIELD_UNION_BYTE(InterruptFlags, flags,
-		byte : 3; // unused
+		byte Unused : 3; // unused
 		byte JoypadInt : 1;
 		byte SerialInt : 1;
 		byte TimerInt : 1;

@@ -7,7 +7,7 @@ Timer::Timer(bool isCGB)
 	: div(isCGB ? 0x00 : 0xAB) // CGB ?
 	, tima(0x00)
 	, tma(0x00)
-	, tac(0xF8)
+	, tac({ .asByte = 0xF8 })
 {}
 
 bool Timer::Tick() {

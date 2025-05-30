@@ -194,6 +194,7 @@ void Memory::Write(u16 addr, byte val) {
 	// $FFFF
 	else {
 		_io.ie = val;
+		return;
 	}
 	
 	debug::cexpr::println("Unimplemented or invalid memory write at {:#06x}", addr);

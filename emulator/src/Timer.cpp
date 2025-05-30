@@ -7,7 +7,7 @@ Timer::Timer(bool isCGB)
 	: div(isCGB ? 0x00 : 0xAB) // CGB ?
 	, tima(0x00)
 	, tma(0x00)
-	, tac({ .asByte = 0xF8 })
+	, tac(0xF8)
 {}
 
 bool Timer::Tick() {
@@ -21,7 +21,7 @@ byte& Timer::Read(u16 addr) {
 	case 0xFF06: return tma;
 	case 0xFF07: return tac.asByte;
 	default:
-		debug::cexpr::println("Unimplemented or invalid memory access at {:#06x}", addr);
+		debug::cexpr::println("Unimplemented or invalid timer read at {:#06x}", addr);
 		debug::cexpr::exit(EXIT_FAILURE);
 		std::unreachable();
 	}
@@ -42,7 +42,7 @@ void Timer::Write(u16 addr, byte data) {
 		tac = data;
 		return;
 	default:
-		debug::cexpr::println("Unimplemented or invalid memory access at {:#06x}", addr);
+		debug::cexpr::println("Unimplemented or invalid timer write at {:#06x}", addr);
 		debug::cexpr::exit(EXIT_FAILURE);
 		std::unreachable();
 	}

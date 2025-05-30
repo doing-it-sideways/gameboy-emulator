@@ -12,6 +12,8 @@
 			byte asByte; \
 		}; \
 		constexpr operator byte() const { return asByte; } \
+		StructName##() {} \
+		constexpr StructName##(byte b) : asByte(b) {} \
 		constexpr StructName##& operator=(byte b) { asByte = b; return *this; } \
 	}
 	
@@ -22,19 +24,20 @@ struct HWRegs {
 // ----- Structs and Typedefs -----
 	BITFIELD_UNION_BYTE(SerialControl, flags,
 		byte TransferEnable : 1;
-		byte Unused : 5; // unused
+		byte _ : 5; // unused
 		byte ClockSpeed : 1;
 		byte ClockSelect : 1;
 	);
 
 	BITFIELD_UNION_BYTE(InterruptFlags, flags,
-		byte Unused : 3; // unused
+		byte _ : 3; // unused
 		byte JoypadInt : 1;
 		byte SerialInt : 1;
 		byte TimerInt : 1;
 		byte LCDInt : 1;
 		byte VBlankInt : 1;
 	);
+
 // ----- Vars -----
 	// In order of their memory locations:
 

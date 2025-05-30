@@ -9,7 +9,7 @@ struct Timer {
 	struct TimerControl {
 		union {
 			struct {
-				byte : 5; // unused
+				byte _ : 5; // unused
 				byte Enable : 1;
 				byte ClockSelect : 2;
 			} data;
@@ -18,6 +18,8 @@ struct Timer {
 
 		constexpr operator byte() const { return asByte; }
 
+		constexpr TimerControl() {};
+		constexpr TimerControl(byte b) : asByte(b) {}
 		constexpr TimerControl& operator=(byte b) {
 			asByte = b;
 			return *this;

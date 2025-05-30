@@ -29,7 +29,7 @@ byte& HWRegs::Read(u16 addr) {
 	case 0xFF0F: return iF.asByte;
 	case 0xFFFF: return ie.asByte;
 	default:
-		debug::cexpr::println("Unimplemented or invalid memory access at {:#06x}", addr);
+		debug::cexpr::println("Unimplemented or invalid io read at {:#06x}", addr);
 		debug::cexpr::exit(EXIT_FAILURE);
 		std::unreachable();
 	}
@@ -55,7 +55,7 @@ void HWRegs::Write(u16 addr, byte val) {
 		ie = val;
 		return;
 	default:
-		debug::cexpr::println("Unimplemented or invalid memory write at {:#06x}", addr);
+		debug::cexpr::println("Unimplemented or invalid io write at {:#06x}", addr);
 		debug::cexpr::exit(EXIT_FAILURE);
 		std::unreachable();
 	}

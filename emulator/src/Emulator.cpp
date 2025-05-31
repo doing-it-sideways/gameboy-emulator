@@ -17,7 +17,8 @@ static auto LoadRom(const std::filesystem::path& romPath) {
 }
 
 Emu::Emu(const std::filesystem::path& romPath)
-	: _memory(std::move(LoadRom(romPath)))
+	: _timer()
+	, _memory(std::move(LoadRom(romPath)), _timer)
 	, _cpuCtx(_memory)
 	, _ppuCtx(_memory)
 {}
@@ -25,7 +26,7 @@ Emu::Emu(const std::filesystem::path& romPath)
 void Emu::Run() {
 	_isRunning = true;
 
-	while (_isRunning && !_screen.IsClosed()) {
+	while (_isRunning) { //&& !_screen.IsClosed()) {
 		if (_isPaused) {
 			// TODO: add delay
 			continue;
@@ -36,7 +37,7 @@ void Emu::Run() {
 			return;
 		}
 
-		_screen.Update();
+		//_screen.Update();
 	}
 }
 
@@ -47,10 +48,22 @@ bool Emu::Update() {
 	if (!_cpuCtx.Update())
 		return false;
 
-	if (_screen.IsClosed())
+	ProcessCycles(_cpuCtx.GetUpdateCycles());
+
+	/*if (_screen.IsClosed())
 		return false;
 	
-	return _screen.Update();
+	return _screen.Update();*/
+	return true;
+}
+
+void Emu::ProcessCycles(u64 mCycles) {
+	// TODO
+	
+	// each t cycle
+	for (int i = 0; i < 4 * mCycles; ++i) {
+		_timer.Tick();
+	}
 }
 
 } // namespace gb

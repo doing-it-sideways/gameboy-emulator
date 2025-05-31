@@ -90,8 +90,8 @@ static std::unique_ptr<IMapperInfo> InitMapperChip(byte type, byte ramSizeCode) 
 	}
 }
 
-Memory::Memory(rom::RomData&& data)
-	: _io(HWRegs::InitRegs())
+Memory::Memory(rom::RomData&& data, Timer& timerRegsRef)
+	: _io(HWRegs::InitRegs(timerRegsRef))
 	, _romData(std::move(data))
 	, _ramInternal(0x2000)
 	, _mapperChipData(InitMapperChip(_romData[0x0147], _romData[0x0149]))
@@ -134,6 +134,7 @@ byte& Memory::Read(u16 addr) {
 	}
 	// [$FF00, $FF7F]
 	else if (addr < ioEnd) {
+		//debug::cexpr::println("READING FROM IO: {:#06x}", addr);
 		return _io.Read(addr);
 	}
 	// [$FF80, $FFFE]
@@ -151,6 +152,9 @@ byte& Memory::Read(u16 addr) {
 }
 
 void Memory::Write(u16 addr, byte val) {
+	if (addr == 0xFF01 || addr == 0xFF02)
+		debug::cexpr::println("TRYING TO WRITE TO {:#06x}: {}", addr, val);
+
 	// [$8000, $9FFF]
 	if (addr >= romNEnd && addr < vramEnd) {
 		// TODO
@@ -183,6 +187,7 @@ void Memory::Write(u16 addr, byte val) {
 	}
 	// [$FF00, $FF7F]
 	else if (addr < ioEnd) {
+		debug::cexpr::println("WRITING TO IO: {:#06x}, {}", addr, val);
 		_io.Write(addr, val);
 		return;
 	}

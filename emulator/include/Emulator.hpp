@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include "Core.hpp"
+#include "HardwareRegisters.hpp"
 #include "Memory.hpp"
 #include "CPU.hpp"
 #include "PPU.hpp"
@@ -31,12 +32,16 @@ public:
 #endif
 
 private:
+	void ProcessCycles(u64 mCycles);
+
+private:
+	Timer _timer;
 	Memory _memory;
 
 	cpu::Context _cpuCtx;
 	ppu::GContext _ppuCtx;
 
-	Screen _screen{};
+	//Screen _screen{};
 
 	bool _isRunning = false;
 	bool _isPaused = false;

@@ -9,12 +9,14 @@
 #include "MapperChipInfo.hpp"
 #include "ROM.hpp"
 #include "HardwareRegisters.hpp"
+#include "Timer.hpp"
 
 namespace gb {
 
 class Memory {
 public:
-	explicit Memory(rom::RomData&& data);
+	// TODO: have hwregs live in memory and make just the timer live in emu?
+	explicit Memory(rom::RomData&& data, Timer& timerRegsRef);
 
 	template <typename Self>
 	auto operator[](this Self&& self, u16 addr);
@@ -51,11 +53,9 @@ private:
 private:	
 	std::array<byte, 0x1800> _vram{};	// video ram
 	std::array<byte, 0x80> _hram{};		// high ram / zero page.
-	
-	HWRegs _io;
-	
-	rom::RomData _romData;			// cartridge rom
-	std::vector<byte> _ramInternal; // no gbc support yet, size always 0x2000
+	HWRegs _io;							// io registers
+	rom::RomData _romData;				// cartridge rom
+	std::vector<byte> _ramInternal;		// no gbc support yet, size always 0x2000
 
 	std::unique_ptr<IMapperInfo> _mapperChipData;
 

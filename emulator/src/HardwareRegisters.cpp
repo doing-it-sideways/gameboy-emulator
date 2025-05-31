@@ -3,23 +3,26 @@
 
 namespace gb {
 
-HWRegs HWRegs::InitRegs(bool isCGB) {
-	if (isCGB)
-		return {}; // TODO
+HWRegs HWRegs::InitRegs(Timer& emuTimer, [[maybe_unused]] bool isCGB) {
+	//if (isCGB)
+	//	return {}; // TODO
 	
-	return HWRegs{
+	return HWRegs {
 		.sb = 0x00,
 		.sc = 0x7E,
+		.timer = emuTimer,
 		.iF = 0xE1,
 		.ie = 0x00
 	};
 }
 
-void HWRegs::Reset([[maybe_unused]] byte oldOAMReg, bool isCGB) {
-	*this = InitRegs(isCGB);
+void HWRegs::Reset([[maybe_unused]] byte oldOAMReg, [[maybe_unused]] bool isCGB) {
+	// TODO
+	debug::cexpr::println(stderr, "hardware registers not reset");
 }
 
 byte& HWRegs::Read(u16 addr) {
+	static byte unimplByte = 0;
 	if (addr >= 0xFF04 && addr <= 0xFF07)
 		return timer.Read(addr);
 
@@ -30,8 +33,9 @@ byte& HWRegs::Read(u16 addr) {
 	case 0xFFFF: return ie.asByte;
 	default:
 		debug::cexpr::println("Unimplemented or invalid io read at {:#06x}", addr);
-		debug::cexpr::exit(EXIT_FAILURE);
-		std::unreachable();
+		//debug::cexpr::exit(EXIT_FAILURE);
+		//std::unreachable();
+		return unimplByte;
 	}
 }
 
@@ -43,9 +47,11 @@ void HWRegs::Write(u16 addr, byte val) {
 
 	switch (addr) {
 	case 0xFF01:
+		debug::cexpr::println("WRITING TO SB");
 		sb = val;
 		return;
 	case 0xFF02:
+		debug::cexpr::println("WRITING TO SC");
 		sc = val;
 		return;
 	case 0xFF0F:
@@ -56,8 +62,8 @@ void HWRegs::Write(u16 addr, byte val) {
 		return;
 	default:
 		debug::cexpr::println("Unimplemented or invalid io write at {:#06x}", addr);
-		debug::cexpr::exit(EXIT_FAILURE);
-		std::unreachable();
+		//debug::cexpr::exit(EXIT_FAILURE);
+		//std::unreachable();
 	}
 }
 

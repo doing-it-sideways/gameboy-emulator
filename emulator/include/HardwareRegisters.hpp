@@ -45,14 +45,15 @@ struct HWRegs {
 
 	SerialControl sc;	// $FF02
 
-	Timer timer;		// [$FF04, $FF07]
+	Timer& timer;		// [$FF04, $FF07]
 
 	InterruptFlags iF;	// $FF0F
 
 	InterruptFlags ie;	// $FFFF
 
 // ----- Funcs -----
-	static HWRegs InitRegs(bool isCGB = false);
+	static HWRegs InitRegs(Timer& emuTimer, bool isCGB = false);
+
 	void Reset(byte oldOAMReg, bool isCGB = false);
 
 	byte& Read(u16 addr);

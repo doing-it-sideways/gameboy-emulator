@@ -173,9 +173,12 @@ public:
 	void EnableInterrupts();
 	void DisableInterrupts();
 
+	inline u64 GetUpdateCycles() const { return _mCycles; }
+
 #ifdef DEBUG
 	// Dumps current state of the cpu to console or a file
-	void Dump() const;
+	void LongDump() const;
+	void ShortDump() const;
 #endif
 
 // --- Functions ---
@@ -193,7 +196,7 @@ private:
 private:
 	Memory& _memory;
 
-	// Count the number of mCycles that have happened
+	// Count the number of mCycles that have happened this update
 	u64 _mCycles = 0;
 
 	// Next instruction to be executed.

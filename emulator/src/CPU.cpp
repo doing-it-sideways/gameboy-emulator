@@ -9,7 +9,7 @@ namespace gb::cpu {
 Context::Context(Memory& memory)
 	: reg{ .pc = 0x0100, .sp = 0xFFFE,
 		   .a = 0x01, .f = { 1, 0, 1, 1 },
-		   .c = 0x13, .d = 0, .e = 0xD8, .h = 0x01, .l = 0x4D }
+		   .b = 0x00, .c = 0x13, .d = 0x00, .e = 0xD8, .h = 0x01, .l = 0x4D }
 	, ir(memory[0x0100])
 	, _memory(memory)
 {
@@ -17,6 +17,8 @@ Context::Context(Memory& memory)
 }
 
 bool Context::Update() {
+	_mCycles = 0;
+
 	if (_isHalted) {
 		MCycle();
 
@@ -29,7 +31,7 @@ bool Context::Update() {
 	else {
 #if defined(DEBUG)
 		if (canDump)
-			Dump(); // print current state of cpu
+			ShortDump(); // print current state of cpu
 #endif
 
 		// fetch and execute overlap on the SM83.
@@ -154,7 +156,8 @@ void Context::DisableInterrupts() {
 	_ime = false;
 }
 
-void Context::Dump() const {
+#ifdef DEBUG
+void Context::LongDump() const {
 	byte data = _memory[reg.pc];
 	auto [ie, _] = _memory.GetInterruptReg();
 
@@ -165,5 +168,12 @@ void Context::Dump() const {
 				 reg.a, reg.bc(), reg.de(), reg.hl());
 	debug::cexpr::println("ir: {:#010b}\tie: {:#010b}\n", ir, static_cast<byte>(ie));
 }
+
+void Context::ShortDump() const {
+	byte data = _memory[reg.pc];
+	debug::cexpr::println("pc: ({:#06x}): {:#04x} a: {:#04x} f: {:04b} bc: {:#06x} de: {:#06x} hl: {:#06x}",
+						  reg.pc, data, reg.a, reg.f >> 4, reg.bc(), reg.de(), reg.hl());
+}
+#endif // DEBUG
 
 } // namespace gb::cpu

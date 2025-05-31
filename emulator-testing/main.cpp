@@ -11,6 +11,9 @@
 #include <ranges>
 #include <iostream>
 
+#include <chrono>
+#include <thread>
+
 static int TestMain(int argc, char** argv);
 static int RunTests(bool step = false);
 static inline int RunTest(std::size_t testNum, bool step = false);
@@ -19,7 +22,9 @@ static int RunTest(const std::filesystem::path& test, bool step = false);
 int main(int argc, char** argv) {
 	using namespace gb;
 
-	auto simulatedArgs = std::to_array<const char*>({ "", "16" });//, "step" });
+	static constexpr auto testNum = "16";
+	//auto simulatedArgs = std::to_array<const char*>({ "", testNum, "step" });
+	auto simulatedArgs = std::to_array<const char*>({ "", testNum });
 	return TestMain(simulatedArgs.size(), const_cast<char**>(simulatedArgs.data()));
 }
 
@@ -118,6 +123,7 @@ static inline int RunTest(std::size_t testNum, bool step) {
 
 static int RunTest(const std::filesystem::path& test, bool step) {
 	using namespace gb;
+	using namespace std::chrono_literals;
 
 	Emu emu{ test };
 
@@ -132,7 +138,7 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 	}
 	else {
 		emu.Start();
-		emu.SetDump(false);
+		//emu.SetDump(false);
 
 		std::string debugStr{};
 		auto& mem = emu.DebugMemory();
@@ -148,6 +154,8 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 				if (debugStr.size() > 0)
 					std::print("");
 			}
+
+			//std::this_thread::sleep_for(5us);
 		}
 	}
 

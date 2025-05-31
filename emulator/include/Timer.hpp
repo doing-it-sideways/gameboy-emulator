@@ -18,7 +18,7 @@ struct Timer {
 
 		constexpr operator byte() const { return asByte; }
 
-		constexpr TimerControl() {};
+		constexpr TimerControl() : asByte() {};
 		constexpr TimerControl(byte b) : asByte(b) {}
 		constexpr TimerControl& operator=(byte b) {
 			asByte = b;
@@ -27,9 +27,10 @@ struct Timer {
 	};
 
 // ----- Vars -----
-	byte div;	// Divider register
-	byte tima;	// Timer counter
-	byte tma;	// Timer modulo
+	// upper: basic clock frequency, lower : thing that increments
+	byte divUpper, divLower;	// Divider register
+	byte tima;					// Timer counter
+	byte tma;					// Timer modulo
 
 	TimerControl tac;
 

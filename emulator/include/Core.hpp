@@ -16,6 +16,7 @@ using u32 = std::uint32_t;
 using u64 = std::uint64_t;
 
 using s8 = std::int8_t;
+using s16 = std::int16_t;
 
 using byte = u8;
 using sbyte = s8;

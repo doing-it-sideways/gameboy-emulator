@@ -148,13 +148,10 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 			if (mem[0xFF02] == 0x81) {
 				debugStr.push_back(static_cast<char>(mem[0xFF01]));
 				mem[0xFF02] = 0;
-
-				std::println("-----Blargg Test Message-----\n{}\n---------------", debugStr);
-				
-				if (debugStr.size() > 0)
-					std::print("");
 			}
 
+			if (!debugStr.empty())
+				std::println("-----Blargg Test Message-----\n{}\n---------------", debugStr);
 			//std::this_thread::sleep_for(5us);
 		}
 	}

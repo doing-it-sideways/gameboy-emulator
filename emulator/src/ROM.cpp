@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include "ROM.hpp"
+#include "ConstexprAdditions.hpp"
 
 namespace gb::rom {
 
@@ -103,9 +104,9 @@ std::optional<RomData> Load(const std::filesystem::path& romPath) {
 	header = reinterpret_cast<decltype(header)>(vec->data() + 0x0100);
 
 #pragma region debug printing for rom load
-	std::println("----- Rom Loaded -----");
+	debug::cexpr::println("----- Rom Loaded -----");
 	// TODO: stop emulation when logo check fails
-	std::println("\t- Logo Check -- Matching? : {}",
+	debug::cexpr::println("\t- Logo Check -- Matching? : {}",
 				 std::ranges::equal(logoBytes, header->logo));
 
 	// 0x33: new licensee code table should be used
@@ -113,66 +114,66 @@ std::optional<RomData> Load(const std::filesystem::path& romPath) {
 		// if small title[last] != null, use big title
 		if (header->newCartridgeShort.title[10] != '\0') {
 			std::string_view title{ header->newCartridgeLong.title, 15 };
-			std::println("\t- Title: {}", title);
-			std::println("\t- Manufacturing Code: N/A");
-			std::println("\t- Color Mode Support: {}", header->newCartridgeLong.cgbFlag == 0x80);
+			debug::cexpr::println("\t- Title: {}", title);
+			debug::cexpr::println("\t- Manufacturing Code: N/A");
+			debug::cexpr::println("\t- Color Mode Support: {}", header->newCartridgeLong.cgbFlag == 0x80);
 		}
 		else {
 			std::string_view title{ header->newCartridgeShort.title, 11 };
-			std::println("\t- Title: {}", title);
-			std::println("\t- Manufacturing Code: {}", header->newCartridgeShort.mfc);
-			std::println("\t- Color Mode Support: {}", header->newCartridgeShort.cgbFlag == 0x80);
+			debug::cexpr::println("\t- Title: {}", title);
+			debug::cexpr::println("\t- Manufacturing Code: {}", header->newCartridgeShort.mfc);
+			debug::cexpr::println("\t- Color Mode Support: {}", header->newCartridgeShort.cgbFlag == 0x80);
 		}
 
 		std::string_view licenseeCode{ header->newLicenseeCode, 2 };
 
 		if (auto it = NewLicensees.find(licenseeCode); it != NewLicensees.end())
-			std::println("\t- Publisher: {}", *it);
+			debug::cexpr::println("\t- Publisher: {}", *it);
 		else
-			std::println("\t- Publisher: Unknown ({})", licenseeCode);
+			debug::cexpr::println("\t- Publisher: Unknown ({})", licenseeCode);
 	}
 	else {
 		std::string_view title{ header->title, 16 }; // avoid overflows
-		std::println("\t- Title: {}", title);
+		debug::cexpr::println("\t- Title: {}", title);
 
-		std::println("\t- Manufacturing Code: N/A");
-		std::println("\t- Color Mode Support: N/A");
+		debug::cexpr::println("\t- Manufacturing Code: N/A");
+		debug::cexpr::println("\t- Color Mode Support: N/A");
 
 		if (auto it = OldLicensees.find(header->oldLicenseeCode); it != OldLicensees.end())
-			std::println("\t- Publisher: {}", *it);
+			debug::cexpr::println("\t- Publisher: {}", *it);
 		else
-			std::println("\t- Publisher: Unknown ({:#04X})", header->oldLicenseeCode);
+			debug::cexpr::println("\t- Publisher: Unknown ({:#04X})", header->oldLicenseeCode);
 	}
 
-	std::println("\t- SGB Flag: {:#04X}", header->sgbFlag);
+	debug::cexpr::println("\t- SGB Flag: {:#04X}", header->sgbFlag);
 
 	if (auto it = CartridgeType.find(header->cartridgeType); it != CartridgeType.end())
-		std::println("\t- Cartridge Type: {}", it->second);
+		debug::cexpr::println("\t- Cartridge Type: {}", it->second);
 	else
-		std::println("\t- Cartridge Type: Unknown ({:#04X})", header->cartridgeType);
+		debug::cexpr::println("\t- Cartridge Type: Unknown ({:#04X})", header->cartridgeType);
 	
 	
-	std::println("\t- ROM Size: {} KiB", 32 * (1 << header->romSize));
+	debug::cexpr::println("\t- ROM Size: {} KiB", 32 * (1 << header->romSize));
 	
 	switch (header->ramSize) {
 	case 0x00:
-		std::println("\t- RAM Size: N/A");
+		debug::cexpr::println("\t- RAM Size: N/A");
 		break;
 	case 0x02:
-		std::println("\t- RAM Size: 8 KiB -- 1 bank");
+		debug::cexpr::println("\t- RAM Size: 8 KiB -- 1 bank");
 		break;
 	case 0x03:
-		std::println("\t- RAM Size: 32 KiB -- 4 banks, 8 KiB each");
+		debug::cexpr::println("\t- RAM Size: 32 KiB -- 4 banks, 8 KiB each");
 		break;
 	case 0x04:
-		std::println("\t- RAM Size: 128 KiB -- 16 banks, 8 KiB each");
+		debug::cexpr::println("\t- RAM Size: 128 KiB -- 16 banks, 8 KiB each");
 		break;
 	case 0x05:
-		std::println("\t- RAM Size: 64 KiB -- 8 banks, 8 KiB each");
+		debug::cexpr::println("\t- RAM Size: 64 KiB -- 8 banks, 8 KiB each");
 	}
 
-	std::println("\t- Region Code: {}", (header->destCode == 0x00) ? "Japan+" : "Overseas");
-	std::println("\t- ROM Version: {}", header->romVersion);
+	debug::cexpr::println("\t- Region Code: {}", (header->destCode == 0x00) ? "Japan+" : "Overseas");
+	debug::cexpr::println("\t- ROM Version: {}", header->romVersion);
 #pragma endregion
 
 	// checksum -- taken right from gbdev.io
@@ -182,11 +183,11 @@ std::optional<RomData> Load(const std::filesystem::path& romPath) {
 	}
 
 	if (u8 match = vec.value()[0x014D]; checksum != match) {
-		std::println("\t- Checksum: {:#04X} (vs $014D) {:#04X}\n---FAILED---", checksum, match);
+		debug::cexpr::println("\t- Checksum: {:#04X} (vs $014D) {:#04X}\n---FAILED---", checksum, match);
 		return std::nullopt;
 	}
 	else
-		std::println("\t- Checksum: {:#04X} (vs $014D) {:#04X}\n---SUCCESS---", checksum, match);
+		debug::cexpr::println("\t- Checksum: {:#04X} (vs $014D) {:#04X}\n---SUCCESS---", checksum, match);
 
 	return vec;
 }

@@ -127,9 +127,7 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 	using namespace gb;
 	using namespace std::chrono_literals;
 
-	/*std::ofstream out{ "F:/C++ Projects/output.txt" };
-	std::cout.rdbuf(out.rdbuf());*/
-	debug::cexpr::RedirectOutput("F:/C++ Projects/output.txt");
+	
 
 	std::println("Running test: {}", test.string());
 

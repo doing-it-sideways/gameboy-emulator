@@ -53,4 +53,6 @@ static constexpr u16 ramBankSize = 1 << 12;
 #define BREAKPOINT __builtin_trap()
 #endif // __cpp_lib_debugging -- breakpoint definitions
 
+#else // DEBUG
+#define BREAKPOINT (void)0
 #endif // DEBUG

@@ -4,12 +4,14 @@
 
 #include "Core.hpp"
 #include "Emulator.hpp"
+#include "ConstexprAdditions.hpp"
 
 #include <array>
 #include <charconv>
 #include <filesystem>
 #include <ranges>
 #include <iostream>
+#include <fstream>
 
 #include <chrono>
 #include <thread>
@@ -22,7 +24,7 @@ static int RunTest(const std::filesystem::path& test, bool step = false);
 int main(int argc, char** argv) {
 	using namespace gb;
 
-	static constexpr auto testNum = "16";
+	static constexpr auto testNum = "15";
 	//auto simulatedArgs = std::to_array<const char*>({ "", testNum, "step" });
 	auto simulatedArgs = std::to_array<const char*>({ "", testNum });
 	return TestMain(simulatedArgs.size(), const_cast<char**>(simulatedArgs.data()));
@@ -125,6 +127,12 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 	using namespace gb;
 	using namespace std::chrono_literals;
 
+	/*std::ofstream out{ "F:/C++ Projects/output.txt" };
+	std::cout.rdbuf(out.rdbuf());*/
+	debug::cexpr::RedirectOutput("F:/C++ Projects/output.txt");
+
+	std::println("Running test: {}", test.string());
+
 	Emu emu{ test };
 
 	if (step) {
@@ -138,9 +146,9 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 	}
 	else {
 		emu.Start();
-		//emu.SetDump(false);
+		emu.SetDump(false, true);
 
-		std::string debugStr{};
+		std::string debugStr{}, prevStr{};
 		auto& mem = emu.DebugMemory();
 
 		// printing blargg tests
@@ -150,9 +158,11 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 				mem[0xFF02] = 0;
 			}
 
-			if (!debugStr.empty())
-				std::println("-----Blargg Test Message-----\n{}\n---------------", debugStr);
-			//std::this_thread::sleep_for(5us);
+			if (debugStr != prevStr) {
+				//std::println("-----Blargg Test Message-----\n{}\n---------------", debugStr);
+				std::println(stderr, "{}", debugStr);
+				prevStr = debugStr;
+			}
 		}
 	}
 

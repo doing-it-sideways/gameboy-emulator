@@ -4,8 +4,8 @@
 #ifdef DEBUG
 #include <cstdlib>
 #include <source_location>
-#include "ConstexprAdditions.hpp"
 #endif
+#include "ConstexprAdditions.hpp"
 
 #include "CPU.hpp"
 #include "Memory.hpp"
@@ -66,7 +66,7 @@ struct [[nodiscard]] R8Reg {
 
 	constexpr R8Reg& operator=(byte data) {
 		if (isIndirectHL) {
-			mem.Write(reg, data);
+			mem.Write(cpu.reg.hl(), data);
 			cpu.MCycle();
 		}
 		else
@@ -75,7 +75,12 @@ struct [[nodiscard]] R8Reg {
 		return *this;
 	}
 
-	constexpr R8Reg& operator=(const R8Reg& other) { return operator=(other.reg); }
+	constexpr R8Reg& operator=(const R8Reg& other) {
+		if (other.isIndirectHL)
+			return operator=(mem.Read(cpu.reg.hl()));
+		else
+			return operator=(other.reg);
+	}
 
 	// postfix operators not supported
 	constexpr R8Reg& operator++() { return operator=(reg + 1); }
@@ -261,7 +266,7 @@ constexpr static [[nodiscard]] std::tuple<byte, bool, bool> SubBytes(byte b1, by
 	auto [h, c] = SubBytesFlags(b1, b2, carry);
 
 	return {
-		b1 - b2 - c,
+		b1 - b2 - carry,
 		h,
 		c
 	};
@@ -278,13 +283,6 @@ constexpr static bool FlagCond(Context::Flags flags, byte val) {
 	case 3: return static_cast<bool>(flags.Carry);	// C
 	default: std::unreachable();
 	}
-}
-
-constexpr static void SetFlagsIfAOrZero(Context& cpu, byte flagVal) {
-	if (cpu.reg.a == 0)
-		cpu.reg.f = flagVal;
-	else
-		cpu.reg.f = 0;
 }
 
 constexpr static void SetCarryFlags(Context& cpu, bool h, bool c) {
@@ -377,7 +375,7 @@ INSTR ld_r16mem_acc(Context& cpu, Memory& mem) {
 INSTR ld_acc_imm16(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	cpu.reg.a = Read2(cpu, mem);
+	cpu.reg.a = mem[Read2(cpu, mem)];
 	cpu.MCycle();
 }
 
@@ -501,7 +499,7 @@ INSTR pop_r16stk(Context& cpu, [[maybe_unused]] Memory&) {
 INSTR add_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	byte destVal = cpu.ir & 0b00000'111;
+	const byte destVal = cpu.ir & 0b00000'111;
 	R8Reg reg = R8_FromBits(cpu, mem, destVal);
 
 	auto [h, c] = AddBytesFlags(cpu.reg.a, reg.reg);
@@ -524,7 +522,7 @@ INSTR add_imm8(Context& cpu, Memory& mem) {
 INSTR adc_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	byte destVal = cpu.ir & 0b00000'111;
+	const byte destVal = cpu.ir & 0b00000'111;
 	R8Reg reg = R8_FromBits(cpu, mem, destVal);
 	
 	auto& flags = cpu.reg.f;
@@ -544,13 +542,13 @@ INSTR adc_imm8(Context& cpu, Memory& mem) {
 	
 	cpu.reg.a += data + flags.Carry;
 
-	cpu.reg.f.SetAllBool(cpu.reg.a == 0, 0, h, c);
+	flags.SetAllBool(cpu.reg.a == 0, 0, h, c);
 }
 
 INSTR sub_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	byte destVal = cpu.ir & 0b00000'111;
+	const byte destVal = cpu.ir & 0b00000'111;
 	R8Reg reg = R8_FromBits(cpu, mem, destVal);
 
 	auto [h, c] = SubBytesFlags(cpu.reg.a, reg.reg);
@@ -573,13 +571,15 @@ INSTR sub_imm8(Context& cpu, Memory& mem) {
 INSTR sbc_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	byte destVal = cpu.ir & 0b00000'111;
+	const byte destVal = cpu.ir & 0b00000'111;
 	R8Reg reg = R8_FromBits(cpu, mem, destVal);
 
 	auto& flags = cpu.reg.f;
+	
+	auto [h, c] = SubBytesFlags(cpu.reg.a, reg.reg, flags.Carry);
 	cpu.reg.a = cpu.reg.a - reg - flags.Carry;
 
-	cpu.reg.f.SetAllBool(cpu.reg.a == 0, 1, cpu.reg.a & 0b00001111, cpu.reg.a & 0b11111111);
+	flags.SetAllBool(cpu.reg.a == 0, 1, h, c);
 }
 
 INSTR sbc_imm8(Context& cpu, Memory& mem) {
@@ -588,9 +588,10 @@ INSTR sbc_imm8(Context& cpu, Memory& mem) {
 	byte data = Read(cpu, mem);
 
 	auto& flags = cpu.reg.f;
-	cpu.reg.a = cpu.reg.a - data - flags.Carry;
-
-	cpu.reg.f.SetAllBool(cpu.reg.a == 0, 1, cpu.reg.a & 0b00001111, cpu.reg.a & 0b11111111);
+	auto [res, h, c] = SubBytes(cpu.reg.a, data, flags.Carry);
+	
+	cpu.reg.a = res;
+	flags.SetAllBool(cpu.reg.a == 0, 1, h, c);
 }
 
 INSTR cp_r8(Context& cpu, Memory& mem) {
@@ -599,36 +600,41 @@ INSTR cp_r8(Context& cpu, Memory& mem) {
 	const byte destVal = cpu.ir & 0b00000'111;
 	R8Reg reg = R8_FromBits(cpu, mem, destVal);
 
-	byte res = cpu.reg.a - reg;
-
-	cpu.reg.f.SetAllBool(res == 0, 1, res & 0b00001111, res & 0b11111111);
+	auto [h, c] = SubBytesFlags(cpu.reg.a, reg.reg);
+	cpu.reg.f.SetAllBool(cpu.reg.a - reg == 0, 1, h, c);
 }
 
 INSTR cp_imm8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	byte data = Read(cpu, mem);
-	s16 res = static_cast<s16>(cpu.reg.a) - data;
 
-	cpu.reg.f.SetAllBool(res == 0, 1, res & 0b00001111, res & 0b11111111);
+	auto [h, c] = SubBytesFlags(cpu.reg.a, data);
+	cpu.reg.f.SetAllBool(cpu.reg.a - data == 0, 1, h, c);
 }
 
 INSTR inc_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	const byte destVal = (cpu.ir & 0b00'111'000) >> 3;
-	R8Reg reg = ++R8_FromBits(cpu, mem, destVal);
+	
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
+	byte oldVal = reg.reg;
+	++reg;
 
-	cpu.reg.f.SetAllBool(reg == 0, 0, reg & 0b00001111 == 0, cpu.reg.f.Carry);
+	cpu.reg.f.SetAllBool(reg == 0, 0, (oldVal & 0x0F) + 1 >= 0x10, cpu.reg.f.Carry);
 }
 
 INSTR dec_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	const byte destVal = (cpu.ir & 0b00'111'000) >> 3;
-	R8Reg reg = --R8_FromBits(cpu, mem, destVal);
+	
+	R8Reg reg = R8_FromBits(cpu, mem, destVal);
+	byte oldVal = reg.reg;
+	--reg;
 
-	cpu.reg.f.SetAllBool(reg == 0, 1, reg & 0b00001111, cpu.reg.f.Carry);
+	cpu.reg.f.SetAllBool(reg == 0, 1, static_cast<s16>(oldVal & 0x0F) - 1 < 0, cpu.reg.f.Carry);
 }
 
 INSTR and_r8(Context& cpu, Memory& mem) {
@@ -639,7 +645,7 @@ INSTR and_r8(Context& cpu, Memory& mem) {
 
 	cpu.reg.a &= reg;
 
-	SetFlagsIfAOrZero(cpu, 0xA0); // Z0H0
+	cpu.reg.f.SetAllBool(cpu.reg.a == 0, 0, 1, 0);
 }
 
 INSTR and_imm8(Context& cpu, Memory& mem) {
@@ -648,7 +654,7 @@ INSTR and_imm8(Context& cpu, Memory& mem) {
 	byte data = Read(cpu, mem);
 	cpu.reg.a &= data;
 
-	SetFlagsIfAOrZero(cpu, 0xA0); // Z0H0
+	cpu.reg.f.SetAllBool(cpu.reg.a == 0, 0, 1, 0);
 }
 
 INSTR or_r8(Context& cpu, Memory& mem) {
@@ -659,7 +665,7 @@ INSTR or_r8(Context& cpu, Memory& mem) {
 
 	cpu.reg.a |= reg;
 
-	SetFlagsIfAOrZero(cpu, 1 << 7); // Z000
+	cpu.reg.f.SetAllBool(cpu.reg.a == 0, 0, 0, 0);
 }
 
 INSTR or_imm8(Context& cpu, Memory& mem) {
@@ -668,7 +674,7 @@ INSTR or_imm8(Context& cpu, Memory& mem) {
 	byte data = Read(cpu, mem);
 	cpu.reg.a |= data;
 
-	SetFlagsIfAOrZero(cpu, 1 << 7); // Z000
+	cpu.reg.f.SetAllBool(cpu.reg.a == 0, 0, 0, 0);
 }
 
 INSTR xor_r8(Context& cpu, Memory& mem) {
@@ -679,7 +685,7 @@ INSTR xor_r8(Context& cpu, Memory& mem) {
 
 	cpu.reg.a ^= reg;
 
-	SetFlagsIfAOrZero(cpu, 1 << 7); // Z000
+	cpu.reg.f.SetAllBool(cpu.reg.a == 0, 0, 0, 0);
 }
 
 INSTR xor_imm8(Context& cpu, Memory& mem) {
@@ -688,7 +694,7 @@ INSTR xor_imm8(Context& cpu, Memory& mem) {
 	byte data = Read(cpu, mem);
 	cpu.reg.a ^= data;
 
-	SetFlagsIfAOrZero(cpu, 1 << 7); // Z000
+	cpu.reg.f.SetAllBool(cpu.reg.a == 0, 0, 0, 0);
 }
 
 INSTR ccf(Context& cpu, [[maybe_unused]] Memory&) {
@@ -776,28 +782,42 @@ INSTR add_hl_r16(Context& cpu, [[maybe_unused]] Memory&) {
 	Addr16Getter handle = R16_GetFromBits(destVal);
 
 	u16 reg = (cpu.reg.*handle)();
-	const u8 oldL = cpu.reg.l;
-	cpu.reg.l += reg & 0x00FF;
+
+	auto [resL, h1, c1] = AddBytes(cpu.reg.l, reg & 0x00FF);
+	cpu.reg.l = resL;
 
 	auto& flags = cpu.reg.f;
 	flags.Subtract = 0;
-	SetCarryFlags(cpu, oldL & 0b00001111, oldL & 0b11111111);
+	SetCarryFlags(cpu, h1, c1);
 
 	cpu.MCycle();
 
-	const u8 oldH = cpu.reg.h;
-	cpu.reg.h += ((reg & 0xFF00) >> 8) + flags.Carry;
-	SetCarryFlags(cpu, oldH & 0b00001111, oldH & 0b11111111);
+	auto [resH, h2, c2] = AddBytes(cpu.reg.h, ((reg & 0xFF00) >> 8), flags.Carry);
+	cpu.reg.h = resH;
+	SetCarryFlags(cpu, h2, c2);
 }
 
 INSTR add_sp_imm8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
-	// TODO: not quite mcycle accurate
-	sbyte e = Read(cpu, mem);
-	cpu.reg.sp += e;
+	// e should be signed, but can be safely ignored. see below
+	byte e = Read(cpu, mem);
 
-	cpu.reg.f.SetAllBool(0, 0, cpu.reg.sp & 0b00001111, cpu.reg.sp & 0b11111111);
+	byte msb = (cpu.reg.sp & 0xFF00) >> 8;
+	byte lsb = cpu.reg.sp & 0x00FF;
+
+	auto [pReg, h, c] = AddBytes(lsb, e);
+	
+	lsb = pReg;
+	cpu.reg.f.SetAllBool(0, 0, h, c);
+
+	cpu.MCycle();
+
+	// effectively subtract one if the byte was signed
+	byte minus1 = (e & 0b10000000) ? 0xFF : 0x00;
+	msb += minus1 + cpu.reg.f.Carry;
+
+	cpu.reg.sp = (static_cast<u16>(msb) << 8) | lsb;
 }
 #pragma endregion 16-bit arithmetic
 
@@ -812,14 +832,15 @@ INSTR rlca(Context& cpu, [[maybe_unused]] Memory&) {
 INSTR rrca(Context& cpu, [[maybe_unused]] Memory&) {
 	PRINTFUNC();
 
+	const bool carry = cpu.reg.a & 1;
 	cpu.reg.a = std::rotr(cpu.reg.a, 1);
-	cpu.reg.f.SetAllBool(0, 0, 0, cpu.reg.a & 0b11111111);
+	cpu.reg.f.SetAllBool(0, 0, 0, carry);
 }
 
 INSTR rla(Context& cpu, [[maybe_unused]] Memory&) {
 	PRINTFUNC();
 	
-	const bool carry = cpu.reg.a & 0b11111111;
+	const bool carry = cpu.reg.a & 0b10000000;
 	cpu.reg.a = (cpu.reg.a << 1) | cpu.reg.f.Carry;
 
 	cpu.reg.f.SetAllBool(0, 0, 0, carry);
@@ -987,8 +1008,9 @@ INSTR cb_rrc_r8(Context& cpu, Memory& mem) {
 
 	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00000'111);
 
+	const bool carry = reg & 1;
 	reg = std::rotr(reg.reg, 1);
-	cpu.reg.f.SetAllBool(0, 0, 0, reg & 0b10000000);
+	cpu.reg.f.SetAllBool(0, 0, 0, carry);
 }
 
 INSTR cb_rl_r8(Context& cpu, Memory& mem) {
@@ -1229,9 +1251,9 @@ INSTR cb_prefix(Context& cpu, Memory& mem) {
 		return;
 	}
 
-	//if (cpu.canDump)
-	//	debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
-	//						cpu.ir, cpu.ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
+	if (cpu.longDump)
+		debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+							cpu.ir, cpu.ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
 
 	auto handler = it->handler;
 	handler(cpu, mem);
@@ -1256,9 +1278,9 @@ bool Context::Fetch() {
 
 	// First, check if it's a non-variable instruction
 	if (auto it = constInstrMap.find(opCode); it != constInstrMap.end()) {
-		//if (canDump)
-		//	debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
-		//						ir, ir, static_cast<byte>(it->first), static_cast<byte>(it->first));
+		if (longDump)
+			debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+								ir, ir, static_cast<byte>(it->first), static_cast<byte>(it->first));
 
 		_handler = it->second;
 		return true;
@@ -1291,9 +1313,9 @@ bool Context::Fetch() {
 		return false;
 	}
 
-	//if (canDump)
-	//	debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
-	//						ir, ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
+	if (longDump)
+		debug::cexpr::println("Op Code (ir): {:#010b} ({:#04x})\tFound: {:#010b} ({:#04x})",
+							ir, ir, static_cast<byte>(it->op), static_cast<byte>(it->op));
 	// Store a function pointer rather than updating the ir
 	// because some instructions have variable op codes. The ir still holds the bits
 	// to determine what register / data / condition needs to be used.

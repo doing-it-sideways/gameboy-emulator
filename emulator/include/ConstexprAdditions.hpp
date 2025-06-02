@@ -15,6 +15,26 @@
 
 namespace debug::cexpr {
 
+constexpr void RedirectOutput(const char* filePathCStr, const char* errPathCStr = "") {
+	if consteval {
+		NOP;
+	}
+	else {
+#ifdef _MSC_VER
+		FILE *out1, *out2;
+		freopen_s(&out1, filePathCStr, "w", stdout);
+
+		if (errPathCStr && errPathCStr != "")
+			freopen_s(&out2, errPathCStr, "w", stderr);
+#else
+		freopen(filePathCStr, "w", stdout);
+
+		if (errPathCStr && errPathCStr != "")
+			freopen(errPathCStr, "w", stderr);
+#endif
+	}
+}
+
 constexpr void exit(int exit_code) {
 	if consteval {
 		NOP;

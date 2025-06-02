@@ -30,8 +30,11 @@ bool Context::Update() {
 	}
 	else {
 #if defined(DEBUG)
-		if (canDump)
-			ShortDump(); // print current state of cpu
+// print current state of cpu
+		if (longDump)
+			LongDump();
+		else if (shortDump)
+			ShortDump();
 #endif
 
 		// fetch and execute overlap on the SM83.
@@ -170,9 +173,17 @@ void Context::LongDump() const {
 }
 
 void Context::ShortDump() const {
-	byte data = _memory[reg.pc];
-	debug::cexpr::println("pc: ({:#06x}): {:#04x} a: {:#04x} f: {:04b} bc: {:#06x} de: {:#06x} hl: {:#06x}",
-						  reg.pc, data, reg.a, reg.f >> 4, reg.bc(), reg.de(), reg.hl());
+	//byte data = _memory[reg.pc];
+	//debug::cexpr::println("pc: ({:#06x}): {:#04x} a: {:#04x} f: {:04b} bc: {:#06x} de: {:#06x} hl: {:#06x}",
+	//					  reg.pc, data, reg.a, reg.f >> 4, reg.bc(), reg.de(), reg.hl());
+
+	byte p1 = _memory.Read(reg.pc);
+	byte p2 = _memory.Read(reg.pc + 1);
+	byte p3 = _memory.Read(reg.pc + 2);
+	byte p4 = _memory.Read(reg.pc + 3);
+	debug::cexpr::println("A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
+						  reg.a, static_cast<byte>(reg.f), reg.b, reg.c, reg.d, reg.e, reg.h, reg.l,
+						  reg.sp, reg.pc, p1, p2, p3, p4);
 }
 #endif // DEBUG
 

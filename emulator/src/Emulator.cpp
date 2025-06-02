@@ -37,6 +37,8 @@ void Emu::Run() {
 			return;
 		}
 
+		ProcessCycles(_cpuCtx.GetUpdateCycles());
+
 		//_screen.Update();
 	}
 }

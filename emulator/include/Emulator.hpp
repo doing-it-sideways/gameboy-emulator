@@ -28,7 +28,10 @@ public:
 
 #if defined(DEBUG) && defined(TESTS)
 	constexpr auto&& DebugMemory() noexcept { return _memory; }
-	constexpr void SetDump(bool dump) noexcept { _cpuCtx.canDump = dump; }
+	constexpr void SetDump(bool longDump, bool shortDump = false) noexcept { 
+		_cpuCtx.longDump = longDump;
+		_cpuCtx.shortDump = shortDump;
+	}
 #endif
 
 private:

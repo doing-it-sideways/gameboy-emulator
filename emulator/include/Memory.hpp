@@ -51,7 +51,7 @@ private:
 	};
 
 private:	
-	std::array<byte, 0x1800> _vram{};	// video ram
+	std::array<byte, 0x2000> _vram{};	// video ram -- split into character ram, and bg map data.
 	std::array<byte, 0x80> _hram{};		// high ram / zero page.
 	HWRegs _io;							// io registers
 	rom::RomData _romData;				// cartridge rom

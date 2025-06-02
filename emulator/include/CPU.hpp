@@ -115,8 +115,7 @@ public:
 		} \
 		constexpr void hl##suffix(u16 val) { hl(val expr 1); }
 
-		// low byte is normally undefined, but pop af needs to function
-		U16GETTERS(a, f);
+		REGISTER16(a, f);
 		REGISTER16(b, c);
 		REGISTER16(d, e);
 		REGISTER16(h, l);
@@ -130,12 +129,6 @@ public:
 		// Implementation requires a callable getter/setter for sp.
 		constexpr u16 spGet() const { return sp; }
 		constexpr void spSet(u16 val) { sp = val; }
-
-		// Special implementation for af setter
-		constexpr void af(u16 val) {
-			a = static_cast<u8>((val & 0xFF00) >> 8);
-			f = 0;
-		}
 	};
 
 // --- Vars ---

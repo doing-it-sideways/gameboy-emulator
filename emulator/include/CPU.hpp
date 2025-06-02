@@ -69,10 +69,10 @@ public:
 		}
 
 		constexpr Flags& operator=(byte b) {
-			Zero = b & (1 << 7);
-			Subtract = b & (1 << 6);
-			HalfCarry = b & (1 << 5);
-			Carry = b & (1 << 4);
+			Zero = (b & (1 << 7)) >> 7;
+			Subtract = (b & (1 << 6)) >> 6;
+			HalfCarry = (b & (1 << 5)) >> 5;
+			Carry = (b & (1 << 4)) >> 4;
 
 			return *this;
 		}
@@ -147,7 +147,8 @@ public:
 
 #ifdef DEBUG
 	// If the cpu should dump current state after each instruction
-	static inline bool canDump = true;
+	static inline bool shortDump = true;
+	static inline bool longDump = true;
 #endif
 
 // --- Functions ---
@@ -179,6 +180,7 @@ public:
 	// Dumps current state of the cpu to console or a file
 	void LongDump() const;
 	void ShortDump() const;
+	static inline u64 ticks = 0;
 #endif
 
 // --- Functions ---

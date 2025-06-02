@@ -23,6 +23,7 @@ void HWRegs::Reset([[maybe_unused]] byte oldOAMReg, [[maybe_unused]] bool isCGB)
 
 byte& HWRegs::Read(u16 addr) {
 	static byte unimplByte = 0;
+	static byte gameboyDoctorLCDTemp = 0x90;
 	if (addr >= 0xFF04 && addr <= 0xFF07)
 		return timer.Read(addr);
 
@@ -30,6 +31,7 @@ byte& HWRegs::Read(u16 addr) {
 	case 0xFF01: return sb;
 	case 0xFF02: return sc.asByte;
 	case 0xFF0F: return iF.asByte;
+	case 0xFF44: return gameboyDoctorLCDTemp; // gameboy doctor tests TODO: remove
 	case 0xFFFF: return ie.asByte;
 	default:
 		debug::cexpr::println("Unimplemented or invalid io read at {:#06x}", addr);
@@ -47,11 +49,9 @@ void HWRegs::Write(u16 addr, byte val) {
 
 	switch (addr) {
 	case 0xFF01:
-		debug::cexpr::println("WRITING TO SB");
 		sb = val;
 		return;
 	case 0xFF02:
-		debug::cexpr::println("WRITING TO SC");
 		sc = val;
 		return;
 	case 0xFF0F:
@@ -64,6 +64,7 @@ void HWRegs::Write(u16 addr, byte val) {
 		debug::cexpr::println("Unimplemented or invalid io write at {:#06x}", addr);
 		//debug::cexpr::exit(EXIT_FAILURE);
 		//std::unreachable();
+		return;
 	}
 }
 

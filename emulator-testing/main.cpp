@@ -127,8 +127,6 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 	using namespace gb;
 	using namespace std::chrono_literals;
 
-	
-
 	std::println("Running test: {}", test.string());
 
 	Emu emu{ test };

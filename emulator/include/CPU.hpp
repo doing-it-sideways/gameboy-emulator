@@ -173,7 +173,6 @@ public:
 	// Dumps current state of the cpu to console or a file
 	void LongDump() const;
 	void ShortDump() const;
-	static inline u64 ticks = 0;
 #endif
 
 // --- Functions ---

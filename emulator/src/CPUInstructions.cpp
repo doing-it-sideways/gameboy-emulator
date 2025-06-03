@@ -954,7 +954,7 @@ INSTR reti(Context& cpu, Memory& mem) {
 	u16 retAddr = cpu.PopStack();
 
 	cpu.reg.pc = retAddr;
-	cpu.EnableInterrupts();
+	cpu.ForceEnableInterrupts();
 	cpu.MCycle();
 }
 
@@ -963,7 +963,7 @@ INSTR rst_tgt3(Context& cpu, [[maybe_unused]] Memory&) {
 
 	cpu.PushStack(cpu.reg.pc);
 
-	byte rstAddr = (cpu.ir & 0b00'111'000) >> 3;
+	byte rstAddr = cpu.ir & 0b00'111'000;
 	cpu.reg.pc = rstAddr;
 }
 #pragma endregion control flow instructions

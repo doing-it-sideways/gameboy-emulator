@@ -49,9 +49,8 @@ bool Context::Update() {
 		}
 	}
 
-	if (_ime) {
+	if (_ime)
 		InterruptHandler();
-	}
 	else if (_enablingIME) {
 		_ime = true;
 		_enablingIME = false;
@@ -61,8 +60,8 @@ bool Context::Update() {
 }
 
 void Context::InterruptHandler() {
+	_enablingIME = false;
 	MCycle(1); // simulate "2" nops. second nop happens at top of PushStack
-	PushStack(reg.pc);
 
 	// TODO: NMI (0x80) is 2nd highest priority after bugged interrupt (0x00)
 	auto [ie, iF] = _memory.GetInterruptReg();
@@ -70,7 +69,9 @@ void Context::InterruptHandler() {
 		if (ie & interrupt && iF & interrupt) {
 			_ime = false;
 
+			PushStack(reg.pc);
 			reg.pc = 0x40 + (i * 8);
+
 			iF = static_cast<byte>(iF) & ~interrupt;
 
 			MCycle();
@@ -150,15 +151,6 @@ void Context::Hang() {
 	BREAKPOINT;
 }
 
-void Context::EnableInterrupts() {
-	_enablingIME = true;
-}
-
-void Context::DisableInterrupts() {
-	_enablingIME = false;
-	_ime = false;
-}
-
 #ifdef DEBUG
 void Context::LongDump() const {
 	byte data = _memory[reg.pc];
@@ -184,6 +176,9 @@ void Context::ShortDump() const {
 	debug::cexpr::println("A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
 						  reg.a, static_cast<byte>(reg.f), reg.b, reg.c, reg.d, reg.e, reg.h, reg.l,
 						  reg.sp, reg.pc, p1, p2, p3, p4);
+
+	/*if (reg.h == 0xC6 && reg.l == 0x3A && reg.pc == 0xDEF8)
+		BREAKPOINT;*/
 }
 #endif // DEBUG
 

@@ -164,8 +164,9 @@ public:
 	void Halt();
 	void Hang();
 
-	void EnableInterrupts();
-	void DisableInterrupts();
+	inline void EnableInterrupts() { _enablingIME = true; }
+	inline void DisableInterrupts() { _enablingIME = false; _ime = false; }
+	inline void ForceEnableInterrupts() { _ime = true; }
 
 	inline u64 GetUpdateCycles() const { return _mCycles; }
 

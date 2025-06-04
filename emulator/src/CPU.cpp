@@ -176,9 +176,6 @@ void Context::ShortDump() const {
 	debug::cexpr::println("A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
 						  reg.a, static_cast<byte>(reg.f), reg.b, reg.c, reg.d, reg.e, reg.h, reg.l,
 						  reg.sp, reg.pc, p1, p2, p3, p4);
-
-	/*if (reg.h == 0xC6 && reg.l == 0x3A && reg.pc == 0xDEF8)
-		BREAKPOINT;*/
 }
 #endif // DEBUG
 

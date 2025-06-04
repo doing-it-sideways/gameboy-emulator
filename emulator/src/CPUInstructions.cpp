@@ -96,11 +96,11 @@ struct [[nodiscard]] R8Reg {
 	constexpr byte operator<<(byte val) const { return reg << val; }
 	constexpr byte operator>>(byte val) const { return reg >> val; }
 
-	constexpr byte& operator&=(byte val) { reg = reg & val; return reg; }
-	constexpr byte& operator|=(byte val) { reg = reg | val; return reg; }
-	constexpr byte& operator^=(byte val) { reg = reg ^ val; return reg; }
-	constexpr byte& operator<<=(byte val) { reg = reg << val; return reg; }
-	constexpr byte& operator>>=(byte val) { reg = reg >> val; return reg; }
+	constexpr R8Reg& operator&=(byte val) { return operator=(reg & val); }
+	constexpr R8Reg& operator|=(byte val) { return operator=(reg | val); }
+	constexpr R8Reg& operator^=(byte val) { return operator=(reg ^ val); }
+	constexpr R8Reg& operator<<=(byte val) { return operator=(reg << val); }
+	constexpr R8Reg& operator>>=(byte val) { return operator=(reg >> val); }
 
 	constexpr friend byte operator+(byte a, const R8Reg& b) { return a + b.reg; }
 	constexpr friend byte operator-(byte a, const R8Reg& b) { return a - b.reg; }
@@ -701,7 +701,7 @@ INSTR ccf(Context& cpu, [[maybe_unused]] Memory&) {
 	PRINTFUNC();
 
 	auto& flags = cpu.reg.f;
-	flags.SetAllBool(flags.Zero, 0, 0, ~flags.Carry);
+	flags.SetAllBool(flags.Zero, 0, 0, !flags.Carry);
 }
 
 INSTR scf(Context& cpu, [[maybe_unused]] Memory&) {
@@ -1010,7 +1010,7 @@ INSTR cb_rrc_r8(Context& cpu, Memory& mem) {
 
 	const bool carry = reg & 1;
 	reg = std::rotr(reg.reg, 1);
-	cpu.reg.f.SetAllBool(0, 0, 0, carry);
+	cpu.reg.f.SetAllBool(reg == 0, 0, 0, carry);
 }
 
 INSTR cb_rl_r8(Context& cpu, Memory& mem) {
@@ -1081,7 +1081,7 @@ INSTR cb_bit_b3_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	const R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00'000'111);
-	const byte bitNum = cpu.ir & 0b00'111'000;
+	const byte bitNum = (cpu.ir & 0b00'111'000) >> 3;
 
 	cpu.reg.f.SetAllBool(!(reg & (1 << bitNum)), 0, 1, cpu.reg.f.Carry);
 }
@@ -1090,7 +1090,7 @@ INSTR cb_res_b3_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00'000'111);
-	const byte bitNum = cpu.ir & 0b00'111'000;
+	const byte bitNum = (cpu.ir & 0b00'111'000) >> 3;
 
 	reg &= ~(1 << bitNum);
 }
@@ -1099,7 +1099,7 @@ INSTR cb_set_b3_r8(Context& cpu, Memory& mem) {
 	PRINTFUNC();
 
 	R8Reg reg = R8_FromBits(cpu, mem, cpu.ir & 0b00'000'111);
-	const byte bitNum = cpu.ir & 0b00'111'000;
+	const byte bitNum = (cpu.ir & 0b00'111'000) >> 3;
 
 	reg |= 1 << bitNum;
 }
@@ -1224,12 +1224,6 @@ INSTR cb_prefix(Context& cpu, Memory& mem) {
 
 	cpu.ir = mem[cpu.reg.pc++];
 	cpu.MCycle();
-
-	// Make sure it's not a undefined op code
-	if (rng::contains(InvalidInstrs, cpu.ir)) {
-		cpu.Hang();
-		return;
-	}
 
 	auto it = rng::find_if(
 		cbInstrMap,

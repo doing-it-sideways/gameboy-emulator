@@ -1,41 +1,27 @@
 #pragma once
 
 #include "Core.hpp"
+#include "BitfieldStruct.hpp"
 #include "Timer.hpp"
-
-#define BITFIELD_UNION_BYTE(StructName, BitfieldName, Bitfield) \
-	struct StructName { \
-		union { \
-			struct { \
-				Bitfield \
-			} BitfieldName; \
-			byte asByte; \
-		}; \
-		constexpr operator byte() const { return asByte; } \
-		StructName##() {} \
-		constexpr StructName##(byte b) : asByte(b) {} \
-		constexpr StructName##& operator=(byte b) { asByte = b; return *this; } \
-	}
-	
 
 namespace gb {
 
 struct HWRegs {
 // ----- Structs and Typedefs -----
 	BITFIELD_UNION_BYTE(SerialControl, flags,
-		byte TransferEnable : 1;
-		byte _ : 5; // unused
-		byte ClockSpeed : 1;
 		byte ClockSelect : 1;
+		byte ClockSpeed : 1;
+		byte _ : 5; // unused
+		byte TransferEnable : 1;
 	);
 
 	BITFIELD_UNION_BYTE(InterruptFlags, flags,
-		byte _ : 3; // unused
-		byte JoypadInt : 1;
-		byte SerialInt : 1;
-		byte TimerInt : 1;
-		byte LCDInt : 1;
 		byte VBlankInt : 1;
+		byte LCDInt : 1;
+		byte TimerInt : 1;
+		byte SerialInt : 1;
+		byte JoypadInt : 1;
+		byte _ : 3; // unused
 	);
 
 // ----- Vars -----

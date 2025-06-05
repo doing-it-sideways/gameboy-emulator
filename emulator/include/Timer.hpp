@@ -1,36 +1,30 @@
 #pragma once
 
 #include "Core.hpp"
+#include "BitfieldStruct.hpp"
 
 namespace gb {
 
 struct Timer {
 // ----- Structs and Typedefs -----
-	struct TimerControl {
-		union {
-			struct {
-				byte _ : 5; // unused
-				byte Enable : 1;
-				byte ClockSelect : 2;
-			} data;
-			byte asByte;
-		};
-
-		constexpr operator byte() const { return asByte; }
-
-		constexpr TimerControl() : asByte() {};
-		constexpr TimerControl(byte b) : asByte(b) {}
-		constexpr TimerControl& operator=(byte b) {
-			asByte = b;
-			return *this;
-		}
-	};
+	BITFIELD_UNION_BYTE(TimerControl, data,
+		byte ClockSelect : 2;
+		byte Enable : 1;
+		byte _ : 5;
+	);
 
 // ----- Vars -----
 	// upper: basic clock frequency, lower : thing that increments
-	byte divUpper, divLower;	// Divider register
-	byte tima;					// Timer counter
-	byte tma;					// Timer modulo
+	// Divider register
+	union {
+		struct {
+			byte upper, lower;
+		} div;
+		u16 divWhole;
+	};
+
+	byte tima;	// Timer counter
+	byte tma;	// Timer modulo
 
 	TimerControl tac;
 
@@ -42,6 +36,9 @@ struct Timer {
 
 	byte& Read(u16 addr);
 	void Write(u16 addr, byte data);
+
+private:
+	bool Update();
 };
 
 } // namespace gb

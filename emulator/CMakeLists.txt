@@ -8,7 +8,6 @@ add_library(${EMU_LIB} STATIC "src/ROM.cpp" "src/CPU.cpp" "src/Memory.cpp" "src/
 
 target_compile_definitions(${EMU_LIB}
     PUBLIC "$<$<CONFIG:Debug,RelWithDebInfo>:DEBUG>"
-    PUBLIC ROMPATH="${PROJECT_SOURCE_DIR}/roms"
     PUBLIC "$<$<CONFIG:Debug,RelWithDebInfo>:$<$<BOOL:${ENABLE_TESTS}>:TESTS>>"
     PUBLIC TESTPATH="$<$<CONFIG:Debug,RelWithDebInfo>:$<$<BOOL:${ENABLE_TESTS}>:${PROJECT_SOURCE_DIR}/tests>>"
 )

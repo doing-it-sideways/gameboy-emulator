@@ -68,7 +68,7 @@ void Emu::ProcessCycles(u64 mCycles) {
 	for (int i = 0; i < 4 * mCycles; ++i) {
 		if (_timer.Tick()) {
 			// TIMA overflows to 0, then one cycle later, IF is set
-			_cpuCtx.MCycle();
+			//_cpuCtx.MCycle();
 			_memory.GetInterruptFlag().flags.TimerInt = 1;
 		}
 	}

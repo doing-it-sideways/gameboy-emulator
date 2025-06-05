@@ -28,7 +28,9 @@ void Emu::Run() {
 
 	while (_isRunning) { //&& !_screen.IsClosed()) {
 		if (_isPaused) {
-			// TODO: add delay
+			// TODO: better pause?
+			using namespace std::chrono_literals;
+			std::this_thread::sleep_for(1ms);
 			continue;
 		}
 
@@ -64,7 +66,11 @@ void Emu::ProcessCycles(u64 mCycles) {
 	
 	// each t cycle
 	for (int i = 0; i < 4 * mCycles; ++i) {
-		_timer.Tick();
+		if (_timer.Tick()) {
+			// TIMA overflows to 0, then one cycle later, IF is set
+			_cpuCtx.MCycle();
+			_memory.GetInterruptFlag().flags.TimerInt = 1;
+		}
 	}
 }
 

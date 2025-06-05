@@ -22,7 +22,7 @@ bool Context::Update() {
 	if (_isHalted) {
 		MCycle();
 
-		auto [ie, ieReq] = _memory.GetInterruptReg();
+		auto [ie, ieReq] = _memory.GetInterruptRegs();
 		// cpu wakes when bitwise and of ie and if != 0
 		// TODO: implement halt bug (gbdev 9.2)
 		if (ie & ieReq)
@@ -64,7 +64,7 @@ void Context::InterruptHandler() {
 	MCycle(1); // simulate "2" nops. second nop happens at top of PushStack
 
 	// TODO: NMI (0x80) is 2nd highest priority after bugged interrupt (0x00)
-	auto [ie, iF] = _memory.GetInterruptReg();
+	auto [ie, iF] = _memory.GetInterruptRegs();
 	for (byte i = 0, interrupt = 1; i < 5; ++i, interrupt <<= 1) {
 		if (ie & interrupt && iF & interrupt) {
 			_ime = false;
@@ -154,7 +154,7 @@ void Context::Hang() {
 #ifdef DEBUG
 void Context::LongDump() const {
 	byte data = _memory[reg.pc];
-	auto [ie, _] = _memory.GetInterruptReg();
+	auto [ie, _] = _memory.GetInterruptRegs();
 
 	debug::cexpr::println("\n---Current CPU State---");
 	debug::cexpr::println("pc ({:#06x}): {:#04x}", reg.pc, data);

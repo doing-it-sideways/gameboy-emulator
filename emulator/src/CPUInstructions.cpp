@@ -971,6 +971,8 @@ INSTR rst_tgt3(Context& cpu, [[maybe_unused]] Memory&) {
 #pragma region interrupt / halt related
 INSTR stop(Context& cpu, Memory& mem) {
 	NOIMPL();
+
+	// TODO: DIV reg reset
 }
 
 INSTR halt(Context& cpu, Memory& mem) {

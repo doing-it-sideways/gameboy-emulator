@@ -51,10 +51,8 @@ bool Context::Update() {
 
 	if (_ime)
 		InterruptHandler();
-	else if (_enablingIME) {
+	else if (_enablingIME)
 		_ime = true;
-		_enablingIME = false;
-	}
 
 	return true;
 }
@@ -68,6 +66,7 @@ void Context::InterruptHandler() {
 	for (byte i = 0, interrupt = 1; i < 5; ++i, interrupt <<= 1) {
 		if (ie & interrupt && iF & interrupt) {
 			_ime = false;
+			_isHalted = false;
 
 			PushStack(reg.pc);
 			reg.pc = 0x40 + (i * 8);
@@ -140,7 +139,7 @@ void Context::MCycle(u8 cycles) {
 
 void Context::Halt() {
 	_isHalted = true;
-	--reg.pc; // IR doesn't increment on halt
+	//--reg.pc; // IR doesn't increment on halt
 }
 
 void Context::Hang() {
@@ -165,14 +164,11 @@ void Context::LongDump() const {
 }
 
 void Context::ShortDump() const {
-	//byte data = _memory[reg.pc];
-	//debug::cexpr::println("pc: ({:#06x}): {:#04x} a: {:#04x} f: {:04b} bc: {:#06x} de: {:#06x} hl: {:#06x}",
-	//					  reg.pc, data, reg.a, reg.f >> 4, reg.bc(), reg.de(), reg.hl());
-
 	byte p1 = _memory.Read(reg.pc);
 	byte p2 = _memory.Read(reg.pc + 1);
 	byte p3 = _memory.Read(reg.pc + 2);
 	byte p4 = _memory.Read(reg.pc + 3);
+
 	debug::cexpr::println("A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
 						  reg.a, static_cast<byte>(reg.f), reg.b, reg.c, reg.d, reg.e, reg.h, reg.l,
 						  reg.sp, reg.pc, p1, p2, p3, p4);

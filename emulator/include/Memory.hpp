@@ -31,7 +31,7 @@ public:
 	std::vector<byte> Dump() const; // TODO
 
 	inline auto GetInterruptRegs() { return std::tie(_io.ie, _io.iF); }
-	inline HWRegs::InterruptFlags& GetInterruptFlag() { return _io.iF; }
+	inline InterruptFlags& GetInterruptFlag() { return _io.iF; }
 
 private:
 	// Allows operator[] to work properly

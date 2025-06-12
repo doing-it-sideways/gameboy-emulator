@@ -54,12 +54,12 @@ struct HWRegs {
 
 	LCDControl lcdc;	// $FF40
 	LCDStatus stat;		// $FF41
-	byte scy;			// $FF42 -- Background viewport y pos
-	byte scx;			// $FF43 -- Background viewport x pos
-	byte ly;			// $FF44 -- LCD Y coordinate (read-only)
+	u8 scy;				// $FF42 -- Background viewport y pos
+	u8 scx;				// $FF43 -- Background viewport x pos
+	u8 ly;				// $FF44 -- LCD Y coordinate (read-only)
 	byte lyc;			// $FF45 -- LY compare
-	byte wy;			// $FF4A -- Window y pos
-	byte wx;			// $FF4B -- Window x pos + 7
+	u8 wy;				// $FF4A -- Window y pos
+	u8 wx;				// $FF4B -- Window x pos + 7
 
 	InterruptFlags ie;	// $FFFF
 

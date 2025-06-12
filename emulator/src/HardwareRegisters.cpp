@@ -34,7 +34,7 @@ byte& HWRegs::Read(u16 addr) {
 	case 0xFF44: return gameboyDoctorLCDTemp; // gameboy doctor tests TODO: remove
 	case 0xFFFF: return ie.asByte;
 	default:
-		debug::cexpr::println("Unimplemented or invalid io read at {:#06x}", addr);
+		debug::cexpr::println(stderr, "Unimplemented or invalid io read at {:#06x}", addr);
 		//debug::cexpr::exit(EXIT_FAILURE);
 		//std::unreachable();
 		return unimplByte;
@@ -61,7 +61,7 @@ void HWRegs::Write(u16 addr, byte val) {
 		ie = val;
 		return;
 	default:
-		debug::cexpr::println("Unimplemented or invalid io write at {:#06x}", addr);
+		debug::cexpr::println(stderr, "Unimplemented or invalid io write at {:#06x}", addr);
 		//debug::cexpr::exit(EXIT_FAILURE);
 		//std::unreachable();
 		return;

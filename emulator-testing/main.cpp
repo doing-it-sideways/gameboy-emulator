@@ -24,9 +24,10 @@ static int RunTest(const std::filesystem::path& test, bool step = false);
 int main(int argc, char** argv) {
 	using namespace gb;
 
-	static constexpr auto testNum = "15";
+	static constexpr auto testNum = "18";
 	//auto simulatedArgs = std::to_array<const char*>({ "", testNum, "step" });
 	auto simulatedArgs = std::to_array<const char*>({ "", testNum });
+	//auto simulatedArgs = std::to_array<const char*>({ "" });
 	return TestMain(simulatedArgs.size(), const_cast<char**>(simulatedArgs.data()));
 }
 
@@ -120,7 +121,7 @@ static int RunTests(bool step) {
 }
 
 static inline int RunTest(std::size_t testNum, bool step) {
-	return RunTest(testPath / testRoms[testNum], step);
+	return RunTest(testPath / testRoms[testNum - 1], step);
 }
 
 static int RunTest(const std::filesystem::path& test, bool step) {
@@ -141,25 +142,9 @@ static int RunTest(const std::filesystem::path& test, bool step) {
 		}
 	}
 	else {
-		emu.Start();
+		//emu.Start();
 		emu.SetDump(false, true);
-
-		std::string debugStr{}, prevStr{};
-		auto& mem = emu.DebugMemory();
-
-		// printing blargg tests
-		while (emu.Update()) {
-			if (mem[0xFF02] == 0x81) {
-				debugStr.push_back(static_cast<char>(mem[0xFF01]));
-				mem[0xFF02] = 0;
-			}
-
-			if (debugStr != prevStr) {
-				//std::println("-----Blargg Test Message-----\n{}\n---------------", debugStr);
-				std::println(stderr, "{}", debugStr);
-				prevStr = debugStr;
-			}
-		}
+		emu.Run();
 	}
 
 	// TODO

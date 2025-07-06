@@ -7,7 +7,6 @@
 #include "Memory.hpp"
 #include "CPU.hpp"
 #include "PPU.hpp"
-
 #include "Screen.hpp"
 
 namespace gb {
@@ -24,7 +23,7 @@ public:
 
 	// Update "loop".
 	// Is public so the cpu can be easily stepped through from outside the class.
-	bool Update();
+	[[nodiscard]] bool Update();
 
 #if defined(DEBUG) && defined(TESTS)
 	constexpr auto&& DebugMemory() noexcept { return _memory; }
@@ -35,7 +34,10 @@ public:
 #endif
 
 private:
-	void ProcessCycles(u64 mCycles);
+	bool CoreUpdate();
+	bool ScreenUpdate();
+
+	bool ProcessCycles(u64 mCycles);
 
 private:
 	Timer _timer;
@@ -44,7 +46,7 @@ private:
 	cpu::Context _cpuCtx;
 	ppu::GContext _ppuCtx;
 
-	//Screen _screen{};
+	Screen _screen{};
 
 	bool _isRunning = false;
 	bool _isPaused = false;

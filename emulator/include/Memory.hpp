@@ -10,6 +10,7 @@
 #include "ROM.hpp"
 #include "HardwareRegisters.hpp"
 #include "Timer.hpp"
+#include "OAM.hpp"
 
 namespace gb {
 
@@ -27,6 +28,9 @@ public:
 	inline byte& ReadRom(u16 physicalAddr) { return _romData[physicalAddr]; }
 
 	void Write(u16 addr, byte val);
+
+	inline bool IsDMAActive() const { return _dmaTransfer.active; }
+	void DMATransferTick();
 
 	std::vector<byte> Dump() const; // TODO
 
@@ -52,15 +56,21 @@ private:
 	};
 
 private:	
-	std::array<byte, 0x2000> _vram{};	// video ram -- split into character ram, and bg map data.
-	std::array<byte, 0x80> _hram{};		// high ram / zero page.
-	HWRegs _io;							// io registers
-	rom::RomData _romData;				// cartridge rom
-	std::vector<byte> _ramInternal;		// no gbc support yet, size always 0x2000
+	std::array<byte, 0x2000> _vram{};		// video ram -- split into character ram, and bg map data.
+	std::array<byte, 0x80> _hram{};			// high ram / zero page.
+	std::array<oam::Attribute, 40> _oam{};	// 40 movable objects (sprites), 8x8 or 8x16 pixels
+	HWRegs _io;								// io registers
+	rom::RomData _romData;					// cartridge rom
+	std::vector<byte> _ramInternal;			// no gbc support yet, size always 0x2000
 
 	std::unique_ptr<IMapperInfo> _mapperChipData;
-
 	const MapperChip _mapperChip = MapperChip::UNKNOWN;
+
+	oam::TransferData _dmaTransfer{};
+
+	// Bytes to return in Read when an invalid value needs to be returned
+	// Should never be changed, but Read returns a non-const byte&
+	static inline constinit std::array<byte, 2> InvalidRead = { 0x00, 0xFF };
 };
 
 } // namespace gb

@@ -96,9 +96,17 @@ Memory::Memory(rom::RomData&& data, Timer& timerRegsRef)
 	, _ramInternal(0x2000)
 	, _mapperChipData(InitMapperChip(_romData[0x0147], _romData[0x0149]))
 	, _mapperChip(GetMapperChipType(_romData[0x0147]))
-{}
+{
+	_dmaTransfer.active = false;
+}
 
 byte& Memory::Read(u16 addr) {
+	// TODO: different behavior for this check on cgb
+	// during OAM DMA, cpu can only access HRAM.
+	// ppu cannot read OAM properly either
+	if (IsDMAActive() && (addr < ioEnd || addr == regIE))
+		return InvalidRead[1];
+
 	// [$0000, $7FFF]
 	if (addr < romNEnd) {
 		if (auto romData = _mapperChipData->ReadRom(*this, addr); romData.has_value())
@@ -106,7 +114,9 @@ byte& Memory::Read(u16 addr) {
 	}
 	// [$8000, $9FFF]
 	else if (addr < vramEnd) {
-		// TODO
+		if (_io.stat.flags.PPUMode == 3)
+			return InvalidRead[1];
+
 		return _vram[addr - 0x8000];
 	}
 	// [$A000, $BFFF]
@@ -126,7 +136,13 @@ byte& Memory::Read(u16 addr) {
 	}
 	// [$FE00, $FE9F]
 	else if (addr < oamEnd) {
-		// TODO
+		byte mode = _io.stat.flags.PPUMode;
+		if ((mode == 2 || mode == 3) && !IsDMAActive())
+			return InvalidRead[1];
+
+		addr -= 0xFE00;
+		auto& oamData = _oam[addr / 4];
+		return oamData.asBytes[addr % 4];
 	}
 	// [$FEA0, $FEFF]
 	else if (addr < unusableEnd) {
@@ -152,13 +168,19 @@ byte& Memory::Read(u16 addr) {
 }
 
 void Memory::Write(u16 addr, byte val) {
+	// TODO: different behavior for this check on cgb
+	if (IsDMAActive() && (addr < ioEnd || addr == regIE))
+		return;
+
 	if (addr < romNEnd) {
 		if (_mapperChipData->AttemptWriteRam(addr, val))
 			return;
 	}
 	// [$8000, $9FFF]
 	else if (addr < vramEnd) {
-		// TODO
+		if (_io.stat.flags.PPUMode == 3)
+			return;
+
 		_vram[addr - 0x8000] = val;
 		return;
 	}
@@ -181,7 +203,13 @@ void Memory::Write(u16 addr, byte val) {
 	}
 	// [$FE00, $FE9F]
 	else if (addr < oamEnd) {
-		// TODO
+		byte mode = _io.stat.flags.PPUMode;
+		if ((mode == 2 || mode == 3) && !IsDMAActive())
+			return;
+
+		addr -= 0xFE00;
+		auto& oamData = _oam[addr / 4];
+		oamData.asBytes[addr % 4] = val;
 	}
 	// [$FEA0, $FEFF]
 	else if (addr < unusableEnd) {
@@ -190,6 +218,9 @@ void Memory::Write(u16 addr, byte val) {
 	}
 	// [$FF00, $FF7F]
 	else if (addr < ioEnd) {
+		if (addr == 0xFF46)
+			_dmaTransfer = oam::TransferData(val); // reset transfer state to be on
+
 		_io.Write(addr, val);
 		return;
 	}
@@ -207,6 +238,17 @@ void Memory::Write(u16 addr, byte val) {
 	debug::cexpr::println("Unimplemented or invalid memory write at {:#06x}", addr);
 	debug::cexpr::exit(EXIT_FAILURE);
 	std::unreachable();
+}
+
+void Memory::DMATransferTick() {
+	assert(_dmaTransfer.active);
+
+	// writes from $FE00 to $FE9F
+	u16 dmaSrcAddr = _dmaTransfer.srcAddr * 0x100;
+	Write(0xFE00 + _dmaTransfer.curByte, Read(dmaSrcAddr + _dmaTransfer.curByte));
+
+	if (++_dmaTransfer.curByte == 0xA0)
+		_dmaTransfer.active = false;
 }
 
 } // namespace gb

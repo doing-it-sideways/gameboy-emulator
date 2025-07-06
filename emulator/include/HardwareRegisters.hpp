@@ -43,6 +43,13 @@ BITFIELD_UNION_BYTE(LCDStatus, flags,
 	byte _ : 1; // unused
 );
 
+BITFIELD_UNION_BYTE(PaletteData, color,
+	u8 ID0 : 2;
+	u8 ID1 : 2;
+	u8 ID2 : 2;
+	u8 ID3 : 2;
+);
+
 struct HWRegs {
 	// In order of their memory locations:
 	byte sb;			// $FF01 -- Serial Transfer Data
@@ -54,10 +61,19 @@ struct HWRegs {
 
 	LCDControl lcdc;	// $FF40
 	LCDStatus stat;		// $FF41
+	
 	u8 scy;				// $FF42 -- Background viewport y pos
 	u8 scx;				// $FF43 -- Background viewport x pos
 	u8 ly;				// $FF44 -- LCD Y coordinate (read-only)
 	byte lyc;			// $FF45 -- LY compare
+
+	byte dma;			// $FF46 -- DMA transfer request address, handled in Memory::Write
+
+	// non-CGB only
+	PaletteData bgp;	// $FF47 -- Background palette data (Color index 0 = white)
+	PaletteData obp0;	// $FF48 -- Object palette data 0 (Color index 0 = transparent)
+	PaletteData obp1;	// $FF49 -- Object palette data 1 (Color index 0 = transparent)
+
 	u8 wy;				// $FF4A -- Window y pos
 	u8 wx;				// $FF4B -- Window x pos + 7
 

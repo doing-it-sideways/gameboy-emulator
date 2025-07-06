@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h> // error includes gl.h
 
 #include "Screen.hpp"
+#include "DebugScreen.hpp"
 
 template <typename Func, typename... Params>
 static void HandleWindowCallback(GLFWwindow* glWindow, Func&& func, Params&&... params) {
@@ -24,8 +25,6 @@ Screen::Screen()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	glfwWindowHint(GLFW_FLOATING, true);
 
 #ifdef DEBUG
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
@@ -77,10 +76,12 @@ Screen::Screen()
 		throw std::runtime_error{ "Unable to setup framebuffer." };
 	}
 
-	glClearColor(1, 1, 1, 1);
+	glClearColor(0, 0, 0, 0);
 }
 
 Screen::~Screen() {
+	debug::ShutdownDebugScreen();
+
 	glfwDestroyWindow(_window);
 	glfwTerminate();
 }
@@ -90,10 +91,16 @@ bool Screen::Update() {
 	if (glfwWindowShouldClose(_window))
 		return false;
 
-	glfwSwapBuffers(_window);
 	glfwPollEvents();
+	debug::UpdateDebugScreenBegin();
 
+	// TODO
 	// glTexSubImage2D?
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	debug::UpdateDebugScreenEnd();
+	glfwSwapBuffers(_window);
+
 	return true;
 }
 

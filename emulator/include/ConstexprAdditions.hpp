@@ -13,6 +13,7 @@
 #define NOP (void)0
 //#define NOPRINT
 
+namespace gb {
 namespace debug::cexpr {
 
 constexpr void RedirectOutput(const char* filePathCStr, const char* errPathCStr = "") {
@@ -103,6 +104,7 @@ constexpr void forceprinterr(std::format_string<Args...> fmt, Args&&... args) {
 	}
 }
 
-} // namespace debug::cexpr
-
 #undef NOP
+
+} // namespace debug::cexpr
+} // namespace gb

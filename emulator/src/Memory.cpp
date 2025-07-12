@@ -136,8 +136,9 @@ byte& Memory::Read(u16 addr) {
 	}
 	// [$FE00, $FE9F]
 	else if (addr < oamEnd) {
+		// OAM inaccessible during PPU modes 2 and 3
 		byte mode = _io.stat.flags.PPUMode;
-		if ((mode == 2 || mode == 3) && !IsDMAActive())
+		if (mode == 2 || mode == 3)
 			return InvalidRead[1];
 
 		addr -= 0xFE00;
@@ -203,8 +204,9 @@ void Memory::Write(u16 addr, byte val) {
 	}
 	// [$FE00, $FE9F]
 	else if (addr < oamEnd) {
+		// OAM inaccessible during PPU modes 2 and 3
 		byte mode = _io.stat.flags.PPUMode;
-		if ((mode == 2 || mode == 3) && !IsDMAActive())
+		if (mode == 2 || mode == 3)
 			return;
 
 		addr -= 0xFE00;

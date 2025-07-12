@@ -11,30 +11,57 @@ GContext::GContext(Memory& memory)
 
 bool GContext::Update() {
 	// ly should only ever be updated inside the ppu
-	byte& ly = _memory.Read(0xFF44);
+	byte& ly = _memory[0xFF44];
 
+	// state machine
 	switch (GetMode()) {
 	case Mode::HBLANK:
+		if (_curDot != dotsPerLine) {
+			++_curDot;
+			break;
+		}
+
+		_curDot = 0;
+
+		if (ly == vBlankStartNext) {
+			SetMode(Mode::VBLANK);
+			break;
+		}
+
+		UpdateLine(ly);
+		break;
+
+	case Mode::VBLANK:
 		if (_curDot == dotsPerLine) {
+			if (ly == lineMax) {
+				SetMode(Mode::OAM_SCAN);
+				ly = 0;
+			}
+			else
+				UpdateLine(ly);
+
 			_curDot = 0;
-
-			if (ly == vBlankStartNext)
-				SetMode(Mode::VBLANK);
-
-			UpdateLine(ly);
 			break;
 		}
 
 		break;
-	case Mode::VBLANK:
-		break;
+
 	case Mode::OAM_SCAN:
-		if (_curDot == oamScanDots)
+		if (_curDot == oamScanDots) {
 			SetMode(Mode::PIXEL_DRAW);
+			break;
+		}
 		
 		++_curDot;
 		break;
+
 	case Mode::PIXEL_DRAW:
+		if (_curDot == _pixelDrawDots) {
+			SetMode(Mode::HBLANK);
+			break;
+		}
+
+		++_curDot;
 		break;
 	}
 
@@ -44,8 +71,8 @@ bool GContext::Update() {
 void GContext::UpdateLine(byte& ly) {
 	++ly;
 
-	byte lycEqLy = static_cast<byte>(ly == _memory.Read(0xFF45));
-	byte& stat = _memory.Read(0xFF41);
+	byte lycEqLy = static_cast<byte>(ly == _memory[0xFF45]);
+	byte& stat = _memory[0xFF41];
 
 	// LCDStatus::LycEqLy should only be set here
 	if (lycEqLy != 0) {
@@ -66,7 +93,7 @@ Mode GContext::GetMode() const {
 }
 
 void GContext::SetMode(Mode newMode) {
-	byte& stat = _memory.Read(0xFF41);
+	byte& stat = _memory[0xFF41];
 	
 	stat &= ~3; // clear bits first
 	stat |= static_cast<byte>(newMode); // then set to new value

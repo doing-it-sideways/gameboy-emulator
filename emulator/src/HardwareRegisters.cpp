@@ -75,6 +75,10 @@ void HWRegs::Write(u16 addr, byte val) {
 		// TODO: spurious STAT interrupts
 		// https://gbdev.io/pandocs/STAT.html#spurious-stat-interrupts
 
+		// Undocumented bug, needed for some games
+		if (stat.flags.PPUMode < 2 && lcdc.flags.LCDEnable == 1)
+			iF.flags.LCDInt = 1;
+
 		LCDStatus newStat = static_cast<LCDStatus>(val);
 		stat.flags.LycIntSelect = newStat.flags.LycIntSelect;
 		stat.flags.M0Select = newStat.flags.M0Select;

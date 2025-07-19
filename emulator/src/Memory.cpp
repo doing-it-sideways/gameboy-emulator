@@ -163,7 +163,8 @@ byte& Memory::Read(u16 addr) {
 		return _io.ie.asByte;
 	}
 
-	debug::cexpr::println("Unimplemented or invalid memory access at {:#06x}", addr);
+	debug::cexpr::println(stderr, "Unimplemented or invalid memory access at {:#06x}", addr);
+	//BREAKPOINT;
 	debug::cexpr::exit(EXIT_FAILURE);
 	std::unreachable();
 }
@@ -237,9 +238,10 @@ void Memory::Write(u16 addr, byte val) {
 		return;
 	}
 	
-	debug::cexpr::println("Unimplemented or invalid memory write at {:#06x}", addr);
-	debug::cexpr::exit(EXIT_FAILURE);
-	std::unreachable();
+	debug::cexpr::println(stderr, "Unimplemented or invalid memory write at {:#06x}", addr);
+	//debug::cexpr::exit(EXIT_FAILURE);
+	//std::unreachable();
+	BREAKPOINT;
 }
 
 void Memory::DMATransferTick() {

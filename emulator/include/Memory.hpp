@@ -37,6 +37,14 @@ public:
 	inline auto GetInterruptRegs() { return std::tie(_io.ie, _io.iF); }
 	inline InterruptFlags& GetInterruptFlag() { return _io.iF; }
 
+	inline byte GetPPUMode() const { return _io.stat.flags.PPUMode; }
+
+#ifdef DEBUG
+	// Normally, reading VRAM during either a DMA transfer or ppu mode 3 will return
+	// garbage data; however, that hurts my eyes when trying to use the VRAM Viewer.
+	inline byte DebugReadVRAM(u16 addr) const { return _vram[addr - 0x8000]; }
+#endif
+
 private:
 	// Allows operator[] to work properly
 	class Accessor {

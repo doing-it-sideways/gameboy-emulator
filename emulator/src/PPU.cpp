@@ -9,41 +9,45 @@ GContext::GContext(Memory& memory)
 	SetMode(Mode::OAM_SCAN);
 }
 
-bool GContext::Update() {
+State GContext::Update() {
 	// ly should only ever be updated inside the ppu
 	byte& ly = _memory[0xFF44];
 
 	// state machine
 	switch (GetMode()) {
+	// TODO: HBLANK
 	case Mode::HBLANK:
 		if (_curDot != dotsPerLine) {
 			++_curDot;
 			break;
 		}
 
+		UpdateLine(ly);
 		_curDot = 0;
 
-		if (ly == vBlankStartNext) {
+		if (ly == vBlankStart) {
 			SetMode(Mode::VBLANK);
-			break;
+			return State::END_FRAME;
 		}
+		else
+			SetMode(Mode::OAM_SCAN);
 
-		UpdateLine(ly);
 		break;
 
 	case Mode::VBLANK:
-		if (_curDot == dotsPerLine) {
-			if (ly == lineMax) {
-				SetMode(Mode::OAM_SCAN);
-				ly = 0;
-			}
-			else
-				UpdateLine(ly);
-
-			_curDot = 0;
+		if (_curDot != dotsPerLine) {
+			++_curDot;
 			break;
 		}
 
+		if (ly == lineMax) {
+			SetMode(Mode::OAM_SCAN);
+			ly = 0;
+		}
+		else
+			UpdateLine(ly);
+
+		_curDot = 0;
 		break;
 
 	case Mode::OAM_SCAN:
@@ -65,19 +69,19 @@ bool GContext::Update() {
 		break;
 	}
 
-	return true;
+	return State::PROCESSING;
 }
 
 void GContext::UpdateLine(byte& ly) {
 	++ly;
 
-	byte lycEqLy = static_cast<byte>(ly == _memory[0xFF45]);
+	bool lycEqLy = (ly == _memory[0xFF45]);
 	byte& stat = _memory[0xFF41];
 
 	// LCDStatus::LycEqLy should only be set here
-	if (lycEqLy != 0) {
+	if (lycEqLy) {
 		LCDStatus statFlags = static_cast<LCDStatus>(stat);
-		statFlags.flags.LycEqLy = lycEqLy;
+		statFlags.flags.LycEqLy = 1;
 
 		if (statFlags.flags.LycIntSelect == 1)
 			_memory.GetInterruptFlag().flags.LCDInt = 1;
@@ -85,11 +89,11 @@ void GContext::UpdateLine(byte& ly) {
 		stat = statFlags;
 	}
 	else
-		stat &= ~(1 << 2); // LycEqLy = 0
+		stat &= ~(1 << 2); // LycEqLy register = 0
 }
 
 Mode GContext::GetMode() const {
-	return static_cast<Mode>(static_cast<LCDStatus>(_memory[0xFF41]).flags.PPUMode);
+	return static_cast<Mode>(_memory.GetPPUMode());
 }
 
 void GContext::SetMode(Mode newMode) {
@@ -97,6 +101,16 @@ void GContext::SetMode(Mode newMode) {
 	
 	stat &= ~3; // clear bits first
 	stat |= static_cast<byte>(newMode); // then set to new value
+
+	if (newMode == Mode::VBLANK)
+		_memory.GetInterruptFlag().flags.VBlankInt = 1;
+
+	if (newMode != Mode::PIXEL_DRAW) {
+		byte statIntBit = (1 << 3) << static_cast<byte>(newMode);
+
+		if ((stat & statIntBit) != 0)
+			_memory.GetInterruptFlag().flags.LCDInt = 1; // LCDInt == Stat Int
+	}
 }
 
 PaletteData GContext::GetPaletteData(Palette palette) const {

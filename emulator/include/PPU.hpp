@@ -52,6 +52,12 @@ namespace ppu {
 			- BG prio: value of the OBJ-to-BG Priority bit (OAM.7)
 */
 
+// Used in Emulator.cpp. If end of frame, wait to hit target FPS of 60.
+enum class State : byte {
+	PROCESSING,
+	END_FRAME
+};
+
 enum class Mode : byte {
 	HBLANK = 0,
 	VBLANK = 1,
@@ -77,7 +83,7 @@ public:
 public:
 	explicit GContext(Memory& memory);
 
-	bool Update();
+	State Update();
 
 	Mode GetMode() const;
 	void SetMode(Mode newMode);
@@ -90,7 +96,7 @@ private:
 
 private:
 	static constexpr u16 lineMax = 153;
-	static constexpr u16 vBlankStartNext = 143;
+	static constexpr u16 vBlankStart = 144;
 	static constexpr u16 dotsPerLine = 456;
 
 	static constexpr u16 hBlankMaxDots = 376 - 172;

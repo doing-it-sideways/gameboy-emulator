@@ -14,10 +14,10 @@ void UpdateDebugScreenBegin();
 void UpdateDebugScreenEnd();
 void ShutdownDebugScreen();
 #else // DEBUG
-#define InitDebugScreen(struct GLFWwindow*, const class Memory*) (void*)0
-#define UpdateDebugScreenBegin() (void*)0
-#define UpdateDebugScreenEnd() (void*)0
-#define ShutdownDebugScreen() (void*)0
+inline void InitDebugScreen(GLFWwindow*, const Memory*) {}
+inline void UpdateDebugScreenBegin() {}
+inline void UpdateDebugScreenEnd() {}
+inline void ShutdownDebugScreen() {}
 #endif // DEBUG
 
 } // namespace debug

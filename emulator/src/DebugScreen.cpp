@@ -88,8 +88,9 @@ void UpdateDebugScreenBegin() {
 
 			for (int tileY = 0; tileY < 16; tileY += 2) {
 				const u16 addr = 0x8000 + (tileNum * 16) + tileY;
-				byte b1 = mem[addr];
-				byte b2 = mem[addr + 1];
+
+				byte b1 = mem.DebugReadVRAM(addr);
+				byte b2 = mem.DebugReadVRAM(addr + 1);
 
 				for (int bit = 7; bit >= 0; --bit) {
 					byte colorIndex = (!!((b1 & (1 << bit))) << 1) | (!!(b2 & (1 << bit)));

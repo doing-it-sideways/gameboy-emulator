@@ -27,14 +27,18 @@ Emu::Emu(const std::filesystem::path& romPath)
 }
 
 void Emu::Run() {
+	using namespace std::chrono_literals;
+	
 	_isRunning = true;
+	_isMultithreaded = true;
+
+	_frameStart = Clock::now();
 
 	auto emuThread = std::jthread([this] {
 		while (_isRunning) {
 			if (_isPaused) {
 				// TODO: better pause?
-				using namespace std::chrono_literals;
-				std::this_thread::sleep_for(1ms);
+				std::this_thread::sleep_for(10ms);
 				continue;
 			}
 
@@ -48,9 +52,6 @@ void Emu::Run() {
 	});
 
 	while (_isRunning) {
-		using namespace std::chrono_literals;
-		std::this_thread::sleep_for(1ms);
-
 		if (!ScreenUpdate()) {
 			_isRunning = false;
 			debug::cexpr::println(stderr, "Something in the screen went wrong!");
@@ -60,9 +61,10 @@ void Emu::Run() {
 	}
 }
 
+#ifdef DEBUG // TODO: REMOVE
 #include <print>
-
 static std::string debugStr{}, prevStr{};
+#endif // DEBUG
 
 bool Emu::CoreUpdate() {
 	if (_isPaused)
@@ -85,7 +87,7 @@ bool Emu::CoreUpdate() {
 		std::println(stderr, "{}", debugStr);
 		prevStr = debugStr;
 	}
-#endif
+#endif // DEBUG
 
 	return true;
 }
@@ -114,15 +116,16 @@ bool Emu::Update() {
 }
 
 bool Emu::ProcessCycles(u64 mCycles) {
-	// TODO
-
-	for (u64 i = 0; i < mCycles; ++i) {
+	for (u64 mCycle = 0; mCycle < mCycles; ++mCycle) {
 		for (u64 tCycle = 0; tCycle < 4; ++tCycle) {
 			if (_timer.Tick()) {
-						// TIMA overflows to 0, then one cycle later, IF is set
-						//_cpuCtx.MCycle();
+				// TIMA overflows to 0, then one cycle later, IF is set
+				//_cpuCtx.MCycle();
 				_memory.GetInterruptFlag().flags.TimerInt = 1;
 			}
+
+			if (_ppuCtx.Update() == ppu::State::END_FRAME && _isMultithreaded)
+				LimitSpeed();
 		}
 
 		if (_memory.IsDMAActive())
@@ -130,6 +133,18 @@ bool Emu::ProcessCycles(u64 mCycles) {
 	}
 
 	return true;
+}
+
+void Emu::LimitSpeed() {
+	using namespace std::chrono_literals;
+
+	Time frameEnd = Clock::now();
+	TargetSpeed timeDiff = frameEnd - _frameStart;
+
+	if (timeDiff < oneFrame)
+		std::this_thread::sleep_for(oneFrame - timeDiff);
+
+	_frameStart = Clock::now();
 }
 
 } // namespace gb

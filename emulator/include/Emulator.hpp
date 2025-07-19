@@ -16,7 +16,7 @@ public:
 	explicit Emu(const std::filesystem::path& romPath);
 
 	// For stepping through instead of running
-	void Start() { _isRunning = true; }
+	void Start() { _isRunning = true; _isMultithreaded = false; }
 
 	// Handles the update loop itself.
 	void Run();
@@ -32,14 +32,23 @@ public:
 		_cpuCtx.shortDump = shortDump;
 	}
 #endif
+private:
+	using Clock = std::chrono::high_resolution_clock;
+	using Time = Clock::time_point;
+
+	using TargetSpeed = std::chrono::duration<double, std::ratio<1, 60>>;
+	static constexpr TargetSpeed oneFrame = TargetSpeed{ 1 };
 
 private:
 	bool CoreUpdate();
 	bool ScreenUpdate();
 
 	bool ProcessCycles(u64 mCycles);
+	void LimitSpeed();
 
 private:
+	Time _frameStart;
+
 	Timer _timer;
 	Memory _memory;
 
@@ -50,6 +59,8 @@ private:
 
 	bool _isRunning = false;
 	bool _isPaused = false;
+
+	static inline bool _isMultithreaded = false;
 };
 
 } // namespace gb

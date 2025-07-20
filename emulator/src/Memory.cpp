@@ -180,8 +180,8 @@ void Memory::Write(u16 addr, byte val) {
 	}
 	// [$8000, $9FFF]
 	else if (addr < vramEnd) {
-		if (_io.stat.flags.PPUMode == 3)
-			return;
+		//if (_io.stat.flags.PPUMode == 3)
+			//return;
 
 		_vram[addr - 0x8000] = val;
 		return;
@@ -241,7 +241,7 @@ void Memory::Write(u16 addr, byte val) {
 	debug::cexpr::println(stderr, "Unimplemented or invalid memory write at {:#06x}", addr);
 	//debug::cexpr::exit(EXIT_FAILURE);
 	//std::unreachable();
-	BREAKPOINT;
+	//BREAKPOINT;
 }
 
 void Memory::DMATransferTick() {

@@ -50,6 +50,16 @@ BITFIELD_UNION_BYTE(PaletteData, color,
 	u8 ID3 : 2;
 );
 
+BITFIELD_UNION_BYTE(Joypad, buttons,
+	byte P10 : 1; // read-only
+	byte P11 : 1; // read-only
+	byte P12 : 1; // read-only
+	byte P13 : 1; // read-only
+	byte P14 : 1; // write-only (read returns 0)
+	byte P15 : 1; // write-only (read returns 0)
+	byte _ : 2; // unused
+);
+
 struct HWRegs {
 	// In order of their memory locations:
 	byte sb;			// $FF01 -- Serial Transfer Data

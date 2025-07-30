@@ -88,7 +88,7 @@ void HWRegs::Write(u16 addr, byte val) {
 	}
 	case 0xFF42: scy = val; return;
 	case 0xFF43: scx = val; return;
-	// case 0xFF44: UNDEFINED
+	case 0xFF44: ly = 0; return; // UNDEFINED: resets scanline
 	case 0xFF45: lyc = val; return;
 	case 0xFF46: dma = val; return;
 	case 0xFF47: bgp = val; return;

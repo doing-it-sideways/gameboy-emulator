@@ -28,6 +28,17 @@ namespace debug {
 static const Memory* debugMem = nullptr;
 static constexpr float DebugScale = 3;
 
+// gb colors
+static constexpr ImColor colors[4] = {
+	ImColor{ 1.f, 1.f, 1.f, 1.f },
+	ImColor{ .6666f, .6666f, .6666f, 1.f },
+	ImColor{ .3333f, .3333f, .3333f, 1.f },
+	ImColor{ 0.f, 0.f, 0.f, 1.f }
+};
+
+static void VRAMViewer();
+static void ScreenViewer();
+
 void InitDebugScreen(GLFWwindow* emuWindow, const Memory* mem) {
 	if (debugMem)
 		return; // avoid being called twice
@@ -55,8 +66,6 @@ void UpdateDebugScreenBegin() {
 	if (!debugMem)
 		return;
 
-	auto& mem = *debugMem;
-
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
@@ -64,18 +73,19 @@ void UpdateDebugScreenBegin() {
 	ImGui::ShowDemoWindow();
 	ImGui::ShowMetricsWindow();
 
-	ImGui::Begin("VRAM Viewer");
+	VRAMViewer();
+
+	ImGui::Render();
+}
+
+static void VRAMViewer() {
+	auto& mem = *debugMem;
+
+	if (!ImGui::Begin("VRAM Viewer"))
+		return;
 
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	glm::vec2 start = ImGui::GetCursorScreenPos();
-
-	// gb colors
-	static constexpr ImColor colors[4] = {
-		ImColor{ 1.f, 1.f, 1.f, 1.f },
-		ImColor{ .6666f, .6666f, .6666f, 1.f },
-		ImColor{ .3333f, .3333f, .3333f, 1.f },
-		ImColor{ 0.f, 0.f, 0.f, 1.f }
-	};
 
 	// thank you mr low level devel for the drawing code :D
 	// imgui: asset browser, custom drawing -> primitives
@@ -94,8 +104,8 @@ void UpdateDebugScreenBegin() {
 
 				for (int bit = 7; bit >= 0; --bit) {
 					byte colorIndex = (!!((b1 & (1 << bit))) << 1) | (!!(b2 & (1 << bit)));
-					
-					const glm::vec2 tilePos = spritePos + glm::vec2{ 7 - bit, tileY / 2 } * DebugScale;
+
+					const glm::vec2 tilePos = spritePos + glm::vec2{ 7 - bit, tileY / 2 } *DebugScale;
 
 					dl->AddRectFilled(tilePos, tilePos + DebugScale, colors[colorIndex]);
 				}
@@ -111,8 +121,10 @@ void UpdateDebugScreenBegin() {
 	}
 
 	ImGui::End();
+}
 
-	ImGui::Render();
+static void ScreenViewer() {
+
 }
 
 void UpdateDebugScreenEnd() {

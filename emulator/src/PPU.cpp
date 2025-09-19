@@ -5,6 +5,8 @@ namespace gb::ppu {
 
 GContext::GContext(Memory& memory)
 	: _memory(memory)
+	, _bgFifo(memory)
+	, _objFifo(memory)
 {
 	SetMode(Mode::OAM_SCAN);
 }
@@ -42,7 +44,7 @@ State GContext::Update() {
 
 		if (ly == lineMax) {
 			SetMode(Mode::OAM_SCAN);
-			ly = 0;
+			UpdateLine(ly, true);
 		}
 		else
 			UpdateLine(ly);
@@ -53,6 +55,8 @@ State GContext::Update() {
 	case Mode::OAM_SCAN:
 		if (_curDot == oamScanDots) {
 			SetMode(Mode::PIXEL_DRAW);
+			_bgFifo.Clear();
+
 			break;
 		}
 		
@@ -60,7 +64,14 @@ State GContext::Update() {
 		break;
 
 	case Mode::PIXEL_DRAW:
+		// Tick fifo: if a bg/win pixel was able to be popped, add it to the display buffer
+		if (auto fifoEntry = _bgFifo.Tick(_curDot % 2 == 0); fifoEntry) {
+
+		}
+
 		if (_curDot == _pixelDrawDots) {
+			_bgFifo.ResetState();
+
 			SetMode(Mode::HBLANK);
 			break;
 		}
@@ -72,8 +83,11 @@ State GContext::Update() {
 	return State::PROCESSING;
 }
 
-void GContext::UpdateLine(byte& ly) {
-	++ly;
+void GContext::UpdateLine(byte& ly, bool zero) {
+	if (zero)
+		ly = 0;
+	else
+		++ly;
 
 	bool lycEqLy = (ly == _memory[0xFF45]);
 	byte& stat = _memory[0xFF41];

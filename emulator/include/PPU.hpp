@@ -3,9 +3,11 @@
 #include <array>
 #include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
+#include <mutex>
 
 #include "Core.hpp"
 #include "HardwareRegisters.hpp"
+#include "PixelFIFO.hpp"
 
 namespace gb {
 
@@ -35,21 +37,6 @@ namespace ppu {
 			  last non-window pixel emitted before window drawing (6),
 			  drawing objects (6-11)
 		- Mode 0 length = 376 - Mode 3 length
-	Pixel FIFO:
-		- Two FIFOs
-			- BG pixels
-			- Object pixels
-			- not shared & independent. Mixed only when popping items
-				- Objects take priority unless they're transparent (color 0)
-		- Holds 16 pixels
-		- FIFO & pixel fetcher work together, ensure FIFO always contains min 8 pixels
-			- 8 pixels required for pixel rendering operation to take place
-		- Only manipulated during mode 3
-		- 4 members:
-			- Color (0-3)
-			- Palette (0-7) [CGB: everything, DMG: Objects only]
-			- Sprite prio: [CGB: OAM index for the object, DMG: Doesn't exist]
-			- BG prio: value of the OBJ-to-BG Priority bit (OAM.7)
 */
 
 // Used in Emulator.cpp. If end of frame, wait to hit target FPS of 60.
@@ -92,7 +79,7 @@ public:
 	void SetPaletteData(Palette palette, PaletteData newIndices);
 
 private:
-	void UpdateLine(byte& ly);
+	void UpdateLine(byte& ly, bool zero = false);
 
 private:
 	static constexpr u16 lineMax = 153;
@@ -103,7 +90,12 @@ private:
 	static constexpr u16 oamScanDots = 80;
 	static constexpr u16 pixelDrawMaxDots = 289;
 
+	std::mutex _screenOutputMutex;
+
 	Memory& _memory;
+
+	PixelFIFO _bgFifo;
+	PixelFIFO _objFifo;
 
 	//u16 _curLine = 0; use ly register
 	u16 _curDot = 0;

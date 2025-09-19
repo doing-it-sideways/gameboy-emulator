@@ -4,15 +4,14 @@
 
 #include <memory>
 
+#include "Core.hpp"
+
 struct GLFWwindow;
 
 namespace gb {
 
 class Screen {
 public:	
-	static constexpr int scrWidth = 160;
-	static constexpr int scrHeight = 144;
-	
 	static constexpr float scaleWidth = 5;
 	static constexpr float scaleHeight = 5;
 

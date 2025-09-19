@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 set(CMAKE_CXX_EXTENSIONS false)
 
-add_library(${EMU_LIB} STATIC "src/ROM.cpp" "src/CPU.cpp" "src/Memory.cpp" "src/CPUInstructions.cpp"  "src/MapperChipInfo.cpp" "src/Screen.cpp" "src/Emulator.cpp" "src/PPU.cpp" "src/HardwareRegisters.cpp" "src/Timer.cpp" "src/DebugScreen.cpp")
+add_library(${EMU_LIB} STATIC "src/ROM.cpp" "src/CPU.cpp" "src/Memory.cpp" "src/CPUInstructions.cpp"  "src/MapperChipInfo.cpp" "src/Screen.cpp" "src/Emulator.cpp" "src/PPU.cpp" "src/HardwareRegisters.cpp" "src/Timer.cpp" "src/DebugScreen.cpp" "src/PixelFIFO.cpp")
 
 target_compile_definitions(${EMU_LIB}
     PUBLIC "$<$<CONFIG:Debug,RelWithDebInfo>:DEBUG>"

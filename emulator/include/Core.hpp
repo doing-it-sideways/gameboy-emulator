@@ -21,6 +21,9 @@ using s16 = std::int16_t;
 using byte = u8;
 using sbyte = s8;
 
+static constexpr u16 scrWidth = 160;
+static constexpr u16 scrHeight = 144;
+
 static constexpr u16 interruptEnd = 0x0100;	// restarts and interrupts [$0000, $0FFF]
 static constexpr u16 headerEnd = 0x0150;	// cartridge header [$0100, $014F]
 static constexpr u16 rom0End = 0x4000;		// fixed rom bank [$0150, $3FFF]

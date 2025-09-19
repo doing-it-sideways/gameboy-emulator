@@ -13,4 +13,5 @@ target_link_libraries(${TEST_PROGRAM}
 if (MSVC)
     target_compile_options(${TEST_PROGRAM} PUBLIC /Zi)
     target_link_options(${TEST_PROGRAM} PUBLIC /INCREMENTAL)
+    set_target_properties(${TEST_PROGRAM} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/")
 endif()
